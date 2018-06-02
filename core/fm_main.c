@@ -108,6 +108,11 @@ static signed int fm_cur_freq_set(unsigned short new_freq)
 	return 0;
 }
 
+static signed int fm_projectid_get(void)
+{
+	return g_fm_struct ? g_fm_struct->projectid : 0;
+}
+
 static enum fm_op_state fm_op_state_get(struct fm *fmp)
 {
 	if (fmp) {
@@ -300,6 +305,7 @@ signed int fm_open(struct fm *fmp)
 			return -FM_ELOCK;
 
 		chipid = mtk_wcn_wmt_chipid_query();
+		fmp->projectid = chipid;
 		WCN_DBG(FM_NTC | MAIN, "wmt chip id=0x%x\n", chipid);
 
 		/* what's the purpose of put chipid to fmp->chip_id ? */
@@ -2168,6 +2174,7 @@ static signed int fm_callback_register(struct fm_callback *cb)
 
 	cb->cur_freq_get = fm_cur_freq_get;
 	cb->cur_freq_set = fm_cur_freq_set;
+	cb->projectid_get = fm_projectid_get;
 	return 0;
 }
 
