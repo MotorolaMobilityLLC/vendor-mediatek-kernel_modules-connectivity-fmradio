@@ -1371,7 +1371,7 @@ static signed int rds_retrieve_g0_ps(unsigned short *block_data, unsigned char S
 				num = 0;
 				for (i = 0; i < 8; i++) {
 					/* even ps=0x20 and bitmap=0xF, send event to host to cover last ps. */
-					if ((pstRDSData->PS_Data.PS[2][i] == 0x0))
+					if (pstRDSData->PS_Data.PS[2][i] == 0x0)
 						num++;
 				}
 				if (num != 8) {
