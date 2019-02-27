@@ -78,6 +78,7 @@ static struct fm_chip_mapping fm_support_chip_array[] = {
 { 0x3967, 0x6631, FM_AD_DIE_CHIP },
 { 0x6771, 0x6631, FM_AD_DIE_CHIP },
 { 0x6775, 0x6631, FM_AD_DIE_CHIP },
+{ 0x6768, 0x6631, FM_AD_DIE_CHIP },
 { 0x6779, 0x6635, FM_AD_DIE_CHIP },
 };
 
