@@ -79,6 +79,10 @@ LOCAL_INIT_RC := init.fmradio_drv.rc
 LOCAL_SRC_FILES := $(patsubst $(LOCAL_PATH)/%,%,$(shell find $(LOCAL_PATH) -type f -name '*.[cho]')) Makefile
 LOCAL_REQUIRED_MODULES := wmt_drv.ko
 
+ifeq ($(TARGET_BUILD_VARIANT),user)
+FM_OPTS := CONFIG_FM_USER_LOAD=1
+endif
+
 include $(MTK_KERNEL_MODULE)
 
 #### Copy Module.symvers from $(LOCAL_REQUIRED_MODULES) to this module #######
@@ -90,6 +94,7 @@ $(FMRADIO_EXPORT_SYMBOL).in: $(intermediates)/LINKED/% : $(WMT_EXPORT_SYMBOL)
 	$(copy-file-to-target)
 	cp $(WMT_EXPORT_SYMBOL) $(FMRADIO_EXPORT_SYMBOL)
 
+$(linked_module): OPTS += $(FM_OPTS)
 $(linked_module): $(FMRADIO_EXPORT_SYMBOL).in
 endif
 endif
