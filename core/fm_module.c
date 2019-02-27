@@ -1443,11 +1443,12 @@ static signed int mt_fm_remove(struct platform_device *pdev)
 }
 
 static struct platform_device *pr_fm_device;
+/*
 static struct platform_device mt_fm_device = {
 	.name = FM_NAME,
 	.id = -1,
 };
-
+*/
 /* platform driver entry */
 static struct platform_driver mt_fm_dev_drv = {
 	.probe = mt_fm_probe,
