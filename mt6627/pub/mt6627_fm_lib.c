@@ -658,9 +658,8 @@ static signed int mt6627_pwrup_DSP_download(struct fm_patch_tbl *patch_tbl)
 	unsigned char *dsp_buf = NULL;
 	unsigned short tmp_reg = 0;
 
-	mt6627_hw_info.eco_ver = (signed int) mtk_wcn_wmt_hwver_get();
+	mt6627_hw_info.eco_ver = (signed int) mtk_wcn_wmt_ic_info_get(1);
 	WCN_DBG(FM_DBG | CHIP, "ECO version:0x%08x\n", mt6627_hw_info.eco_ver);
-	mt6627_hw_info.eco_ver += 1;
 
 	/* get mt6627 DSP rom version */
 	ret = mt6627_get_rom_version();
