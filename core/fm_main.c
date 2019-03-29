@@ -48,6 +48,7 @@ static bool g_fm_stat[3] = {
 	false,		/* TX scan */
 };
 
+#if !defined(MT6631_FM) && !defined(MT6635_FM)
 /* chipid porting table */
 static struct fm_chip_mapping fm_support_chip_array[] = {
 { 0x6572, 0x6627, FM_AD_DIE_CHIP },
@@ -81,6 +82,7 @@ static struct fm_chip_mapping fm_support_chip_array[] = {
 { 0x6768, 0x6631, FM_AD_DIE_CHIP },
 { 0x6779, 0x6635, FM_AD_DIE_CHIP },
 };
+#endif
 
 /* RDS reset related functions */
 static unsigned short fm_cur_freq_get(void);
@@ -271,9 +273,18 @@ signed int fm_wholechip_rst_cb(signed int sta)
 
 static signed int fm_which_chip(unsigned short chipid, enum fm_cfg_chip_type *type)
 {
-	signed short i = 0;
 	signed short fm_chip  = -1;
 
+#if defined(MT6631_FM)
+	fm_chip = 0x6631;
+	if (type)
+		*type = FM_AD_DIE_CHIP;
+#elif defined(MT6635_FM)
+	fm_chip = 0x6635;
+	if (type)
+		*type = FM_AD_DIE_CHIP;
+#else
+	signed short i = 0;
 	for (i = 0; i < (sizeof(fm_support_chip_array)/sizeof(struct fm_chip_mapping)); i++) {
 		if (chipid == fm_support_chip_array[i].con_chip) {
 			fm_chip = fm_support_chip_array[i].fm_chip;
@@ -289,7 +300,7 @@ static signed int fm_which_chip(unsigned short chipid, enum fm_cfg_chip_type *ty
 			}
 		}
 	}
-
+#endif
 	return fm_chip;
 }
 
