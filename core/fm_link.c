@@ -473,16 +473,16 @@ extern signed int fm_print_cmd_fifo(void)
 	while (false == FM_TRACE_EMPTY(cmd_fifo)) {
 		fm_memset(trace.pkt, 0, FM_TRACE_PKT_SIZE);
 		FM_TRACE_OUT(cmd_fifo, &trace);
-		WCN_DBG(FM_ALT | LINK, "trace, type %d, op %d, len %d, tid %d, time %d\n",
+		WCN_DBG_LIMITED(FM_ALT | LINK, "trace, type %d, op %d, len %d, tid %d, time %d\n",
 			trace.type, trace.opcode, trace.len, trace.tid, jiffies_to_msecs(abs(trace.time)));
 		i = 0;
 		while ((trace.len > 0) && (i < trace.len) && (i < (FM_TRACE_PKT_SIZE - 8))) {
-			WCN_DBG(FM_ALT | LINK, "trace, %02x %02x %02x %02x %02x %02x %02x %02x\n",
+			WCN_DBG_LIMITED(FM_ALT | LINK, "trace, %02x %02x %02x %02x %02x %02x %02x %02x\n",
 				trace.pkt[i], trace.pkt[i + 1], trace.pkt[i + 2], trace.pkt[i + 3],
 				trace.pkt[i + 4], trace.pkt[i + 5], trace.pkt[i + 6], trace.pkt[i + 7]);
 			i += 8;
 		}
-		WCN_DBG(FM_ALT | LINK, "trace\n");
+		WCN_DBG_LIMITED(FM_ALT | LINK, "trace\n");
 	}
 #endif
 
@@ -500,17 +500,17 @@ extern signed int fm_print_evt_fifo(void)
 	while (false == FM_TRACE_EMPTY(evt_fifo)) {
 		fm_memset(trace.pkt, 0, FM_TRACE_PKT_SIZE);
 		FM_TRACE_OUT(evt_fifo, &trace);
-		WCN_DBG(FM_ALT | LINK, "%s: op %d, len %d, %d\n", evt_fifo->name, trace.opcode,
+		WCN_DBG_LIMITED(FM_ALT | LINK, "%s: op %d, len %d, %d\n", evt_fifo->name, trace.opcode,
 			trace.len, jiffies_to_msecs(abs(trace.time)));
 		i = 0;
 		while ((trace.len > 0) && (i < trace.len) && (i < (FM_TRACE_PKT_SIZE - 8))) {
-			WCN_DBG(FM_ALT | LINK, "%s: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+			WCN_DBG_LIMITED(FM_ALT | LINK, "%s: %02x %02x %02x %02x %02x %02x %02x %02x\n",
 				evt_fifo->name, trace.pkt[i], trace.pkt[i + 1], trace.pkt[i + 2],
 				trace.pkt[i + 3], trace.pkt[i + 4], trace.pkt[i + 5],
 				trace.pkt[i + 6], trace.pkt[i + 7]);
 			i += 8;
 		}
-		WCN_DBG(FM_ALT | LINK, "%s\n", evt_fifo->name);
+		WCN_DBG_LIMITED(FM_ALT | LINK, "%s\n", evt_fifo->name);
 	}
 #endif
 
