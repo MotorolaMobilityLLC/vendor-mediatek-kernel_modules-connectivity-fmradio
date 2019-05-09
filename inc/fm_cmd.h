@@ -22,6 +22,7 @@
 extern unsigned char *cmd_buf;
 extern struct fm_lock *cmd_buf_lock;
 extern struct fm_res_ctx *fm_res;
+extern unsigned char top_index;
 
 /* FM basic-operation's opcode */
 #define FM_BOP_BASE (0x80)
