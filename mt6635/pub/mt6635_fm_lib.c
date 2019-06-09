@@ -1494,14 +1494,14 @@ static signed int mt6635_SetMonoStereo(signed int MonoStereo)
 	signed int ret = 0;
 
 	WCN_DBG(FM_NTC | CHIP, "set to %s\n", MonoStereo ? "mono" : "auto");
-	fm_top_reg_write(0x50, 0x0007);
+	fm_reg_write(0x60, 0x0007);
 
 	if (MonoStereo)	/*mono */
 		ret = fm_set_bits(0x75, 0x0008, ~0x0008);
 	else
 		ret = fm_set_bits(0x75, 0x0000, ~0x0008);
 
-	fm_top_reg_write(0x50, 0x000F);
+	fm_reg_write(0x60, 0x000F);
 	return ret;
 }
 
