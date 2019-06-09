@@ -1434,7 +1434,6 @@ static unsigned short mt6631_read_dsp_reg(unsigned short addr)
 	return regValue;
 }
 
-
 static bool mt6631_is_valid_freq(unsigned short freq)
 {
 	int i = 0;
@@ -1472,7 +1471,6 @@ static bool mt6631_is_valid_freq(unsigned short freq)
 
 	return valid;
 }
-
 
 /*
  * mt6631_GetCurRSSI - get current freq's RSSI value

@@ -54,6 +54,8 @@
 #define FM_SPACE_DEFAULT    FM_SPACE_100K
 #endif
 
+#define FM_INVALID_CHAN_NOISE_REDUCING    0
+
 #define FM_TX_SCAN_UP	(0)
 #define FM_TX_SCAN_DOWN	(1)
 #define FM_TX_SCAN_MAX 10
