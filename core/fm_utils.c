@@ -773,3 +773,28 @@ signed int fm_fifo_release(struct fm_fifo *fifo)
 
 	return 0;
 }
+
+unsigned short fm_get_u16_from_auc(unsigned char *buf)
+{
+	return (unsigned short)((unsigned short)buf[0] + ((unsigned short) buf[1] << 8));
+}
+
+void fm_set_u16_to_auc(unsigned char *buf, unsigned short val)
+{
+	buf[0] = (unsigned char)(val & 0xFF);
+	buf[1] = (unsigned char)(val >> 8);
+}
+
+unsigned int fm_get_u32_from_auc(unsigned char *buf)
+{
+	return ((unsigned int)(*buf) + ((unsigned int)(*(buf + 1)) << 8) +
+		((unsigned int)(*(buf + 2)) << 16) + ((unsigned int)(*(buf + 3)) << 24));
+}
+
+void fm_set_u32_to_auc(unsigned char *buf, unsigned int val)
+{
+	buf[0] = (unsigned char)val;
+	buf[1] = (unsigned char)(val >> 8);
+	buf[2] = (unsigned char)(val >> 16);
+	buf[3] = (unsigned char)(val >> 24);
+}

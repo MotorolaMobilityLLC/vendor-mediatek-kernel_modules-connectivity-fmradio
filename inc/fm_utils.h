@@ -318,4 +318,12 @@ signed int fm_delayms(unsigned int data);
 
 signed int fm_delayus(unsigned int data);
 
+unsigned short fm_get_u16_from_auc(unsigned char *buf);
+
+void fm_set_u16_to_auc(unsigned char *buf, unsigned short val);
+
+unsigned int fm_get_u32_from_auc(unsigned char *buf);
+
+void fm_set_u32_to_auc(unsigned char *buf, unsigned int val);
+
 #endif /* __FM_UTILS_H__ */

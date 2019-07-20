@@ -11,28 +11,38 @@
  * GNU General Public License for more details.
  */
 
-#include "osal_typedef.h"
-#include "stp_exp.h"
-#include "wmt_exp.h"
-
 #include "fm_typedef.h"
 #include "fm_dbg.h"
 #include "fm_err.h"
 #include "fm_eint.h"
+#include "fm_reg_utils.h"
 
 signed int fm_enable_eint(void)
 {
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
+
+	if (ei->enable_eint)
+		ei->enable_eint();
+
 	return 0;
 }
 
 signed int fm_disable_eint(void)
 {
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
+
+	if (ei->disable_eint)
+		ei->disable_eint();
+
 	return 0;
 }
 
 signed int fm_request_eint(void (*parser) (void))
 {
-	mtk_wcn_stp_register_event_cb(FM_TASK_INDX, parser);
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
+
+	if (ei->stp_register_event_cb)
+		ei->stp_register_event_cb(parser);
 
 	return 0;
 }
