@@ -33,12 +33,34 @@
 #include "fm_reg_utils.h"
 
 #if CFG_FM_CONNAC2
+
 #include "conninfra.h"
-#else
+
+#else  /* CFG_FM_CONNAC2 */
+
 #include "osal_typedef.h"
 #include "stp_exp.h"
 #include "wmt_exp.h"
-#endif
+
+enum {
+	SYS_SPI_WF1 = 0x00,
+	SYS_SPI_WF  = 0x01,
+	SYS_SPI_BT  = 0x02,
+	SYS_SPI_FM  = 0x03,
+	SYS_SPI_GPS = 0x04,
+	SYS_SPI_TOP = 0x05,
+	SYS_SPI_WF2 = 0x06,
+	SYS_SPI_WF3 = 0x07,
+	SYS_SPI_MAX
+};
+
+enum {
+	SYS_SPI_OK = 0,
+	SYS_SPI_BUSY,
+	SYS_SPI_ERR
+};
+
+#endif /* CFG_FM_CONNAC2 */
 
 extern signed int fm_rds_parser(
 	struct rds_rx_t *rds_raw, signed int rds_size);
