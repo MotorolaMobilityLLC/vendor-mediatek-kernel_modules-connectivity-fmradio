@@ -55,6 +55,10 @@ ifeq ($(CONFIG_MTK_FM_CHIP),)
     $(error CONFIG_MTK_FM_CHIP not defined)
 endif
 
+ifneq ($(CFG_FM_CHIP_ID),)
+    ccflags-y += -D CFG_FM_CHIP_ID=0x$(CFG_FM_CHIP_ID)
+endif
+
     MODULE_NAME := fmradio_drv
     obj-m += $(MODULE_NAME).o
 
