@@ -746,9 +746,10 @@ static void mt6635_show_reg(void)
 
 static signed int mt6635_PowerUp(unsigned short *chip_id, unsigned short *device_id)
 {
-	signed int ret = 0;
+	signed int ret = 0, count = 0;
 	unsigned short pkt_size;
 	unsigned short tmp_reg = 0;
+	unsigned int tem = 0;
 
 	if (chip_id == NULL) {
 		WCN_DBG(FM_ERR | CHIP, "%s,invalid pointer\n", __func__);
@@ -760,6 +761,27 @@ static signed int mt6635_PowerUp(unsigned short *chip_id, unsigned short *device
 	}
 
 	WCN_DBG(FM_DBG | CHIP, "pwr on seq......\n");
+
+	/* enable osc_en to conn_infra_cfg */
+	ret = fm_host_reg_write(0x18008040, 0x00000001);
+	if (ret) {
+		WCN_DBG(FM_ERR | CHIP, "Enable osc_en to conn_infra_cfg failed\n");
+		return ret;
+	}
+
+	/* polling 26M rdy, max 5 times */
+	do {
+		fm_delayus(1000);
+		ret = fm_host_reg_read(0x18001830, &tem);
+		if (ret) {
+			WCN_DBG(FM_ERR | CHIP, "read 0x18001830 failed\n");
+			return ret;
+		}
+		count++;
+	} while ((tem & 0x80000) == 0 && count < 5);
+
+	if (count >= 5)
+		WCN_DBG(FM_ERR | CHIP, "polling 26M rdy failed\n");
 
 	/* Wholechip FM Power Up: step 1, set common SPI parameter */
 	ret = fm_host_reg_write(0x1800400C, 0x0000801F);
@@ -827,7 +849,6 @@ static signed int mt6635_PowerUp(unsigned short *chip_id, unsigned short *device
 
 	/* Enable connsys FM 2 wire RX */
 	fm_reg_write(0x9B, 0xF9AB);                /* G2: Set audio output i2s TX mode */
-	fm_host_reg_write(0x18008040, 0x00000001); /* G3: set 'cr_fm_xo_always_on' = 1 */
 	fm_host_reg_write(0x18008064, 0x00000014); /* G4: Enable aon_osc_clk_cg */
 	fm_host_reg_write(0x18008058, 0x888100C3); /* G5: Enable FMAUD trigger, 20170119 */
 	fm_host_reg_write(0x18000070, 0x00000000); /* G6: Release fmsys memory power down*/
@@ -894,12 +915,6 @@ static signed int mt6635_PowerDown(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: disable rf_spi_div_en write failed\n", __func__);
 
-	/* Enable 26M crystal sleep */
-	WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x18008040[0] = 0x0\n");
-	ret = fm_host_reg_read(0x18008040, &tem);
-	tem = tem & 0xFFFFFFFE;
-	ret = fm_host_reg_write(0x18008040, tem);
-
 	if (ret)
 		WCN_DBG(FM_ALT | CHIP, "PowerDown: Enable 26M crystal sleep failed\n");
 
@@ -925,6 +940,12 @@ static signed int mt6635_PowerDown(void)
 	ret = fm_host_reg_write(0x1800400C, tem);
 	if (ret)
 		WCN_DBG(FM_ALT | CHIP, "set common spi fm parameter failed\n");
+
+	/* clear 26M crystal sleep */
+	WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x18008040[0] = 0x0\n");
+	ret = fm_host_reg_read(0x18008040, &tem);
+	tem = tem & 0xFFFFFFFE;
+	ret = fm_host_reg_write(0x18008040, tem);
 
 	return ret;
 }
