@@ -108,6 +108,78 @@ static unsigned short mt6631_get_chipid(void)
 	return 0x6631;
 }
 
+static signed int mt6631_switch_clk_64m(void)
+{
+	unsigned int val = 0;
+	int i = 0, ret = 0;
+
+	/* switch SPI clock to 64MHz */
+	ret = fm_host_reg_read(0x81026004, &val);
+	/* Set 0x81026004[0] = 0x1 */
+	ret = fm_host_reg_write(0x81026004, val | 0x1);
+	if (ret) {
+		WCN_DBG(FM_ALT | CHIP,
+			"RampDown Switch SPI clock to 64MHz failed\n");
+		return -1;
+	}
+
+	for (i = 0; i < 100; i++) {
+		fm_host_reg_read(0x81026004, &val);
+		if ((val & 0x18) == 0x10)
+			break;
+		fm_delayus(10);
+	}
+
+	if (i == 100) {
+		WCN_DBG(FM_ERR | CHIP,
+			"switch_SPI_clock_to_64MHz polling timeout\n");
+		return -1;
+	}
+
+	/* Capture next (with SPI Clock: 64MHz) */
+	fm_host_reg_read(0x81026004, &val);
+	/* Set 0x81026004[2] = 0x1 */
+	fm_host_reg_write(0x81026004, val | 0x4);
+
+	return 0;
+}
+
+static signed int mt6631_switch_clk_26m(void)
+{
+	unsigned int val = 0;
+	int i = 0, ret = 0;
+
+	/* Capture next (with SPI Clock: 26MHz) */
+	fm_host_reg_read(0x81026004, &val);
+	/* Set 0x81026004[2] = 0x0 */
+	fm_host_reg_write(0x81026004, val & 0xFFFFFFFB);
+
+	/* switch SPI clock to 26MHz */
+	ret = fm_host_reg_read(0x81026004, &val);
+	/* Set 0x81026004[0] = 0x0 */
+	ret = fm_host_reg_write(0x81026004, val & 0xFFFFFFFE);
+	if (ret) {
+		WCN_DBG(FM_ALT | CHIP,
+			"RampDown Switch SPI clock to 26MHz failed\n");
+		return -1;
+	}
+
+	for (i = 0; i < 100; i++) {
+		fm_host_reg_read(0x81026004, &val);
+		if ((val & 0x18) == 0x8)
+			break;
+		fm_delayus(10);
+	}
+
+	if (i == 100) {
+		WCN_DBG(FM_ERR | CHIP,
+			"switch_SPI_clock_to_26MHz polling timeout\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 /*  MT6631_SetAntennaType - set Antenna type
  *  @type - 1, Short Antenna;  0, Long Antenna
  */
@@ -213,14 +285,7 @@ static signed int mt6631_RampDown(void)
 
 	WCN_DBG(FM_DBG | CHIP, "ramp down\n");
 
-	/* switch SPI clock to 26MHz */
-	ret = fm_host_reg_read(0x81026004, &tem);   /* Set 0x81026004[0] = 0x0 */
-	tem = tem & 0xFFFFFFFE;
-	ret = fm_host_reg_write(0x81026004, tem);
-	if (ret) {
-		WCN_DBG(FM_ALT | CHIP, "RampDown Switch SPI clock to 26MHz failed\n");
-		return ret;
-	}
+	mt6631_switch_clk_26m();
 	WCN_DBG(FM_DBG | CHIP, "RampDown Switch SPI clock to 26MHz\n");
 
 	/* unlock 64M */
@@ -967,13 +1032,7 @@ static signed int mt6631_PowerDown(void)
 		return ret;
 	}
 
-	/*switch SPI clock to 26M*/
-	WCN_DBG(FM_DBG | CHIP, "PowerDown: switch SPI clock to 26M\n");
-	ret = fm_host_reg_read(0x81026004, &tem);
-	tem = tem & 0xFFFFFFFE;
-	ret = fm_host_reg_write(0x81026004, tem);
-	if (ret)
-		WCN_DBG(FM_ALT | CHIP, "PowerDown: switch SPI clock to 26M failed\n");
+	mt6631_switch_clk_26m();
 
 	/* unlock 64M */
 	if (projectid != 0x6768 && projectid != 0x6779 && projectid != 0x6785) {
@@ -1187,12 +1246,8 @@ static bool mt6631_SetFreq(unsigned short freq)
 				ret = fm_host_reg_read(0x80021118, &reg_val);
 
 			if (reg_val & 0x08000000) {
-				flag_spi_hopping = true;
 				WCN_DBG(FM_NTC | CHIP, "%s: POLLING PLL_RDY success !\n", __func__);
-				/* switch SPI clock to 64MHz */
-				ret = fm_host_reg_read(0x81026004, &reg_val); /* wr 0x81026004[0] 0x1	D0 */
-				reg_val |= 0x00000001;
-				ret = fm_host_reg_write(0x81026004, reg_val);
+				flag_spi_hopping = mt6631_switch_clk_64m() == 0;
 				break;
 			}
 			fm_delayus(10);
@@ -1776,12 +1831,8 @@ static signed int mt6631_soft_mute_tune(unsigned short freq, signed int *rssi, s
 				ret = fm_host_reg_read(0x80021118, &reg_val);
 
 			if (reg_val & 0x08000000) {
-				flag_spi_hopping = true;
 				WCN_DBG(FM_NTC | CHIP, "%s: POLLING PLL_RDY success !\n", __func__);
-				/* switch SPI clock to 64MHz */
-				ret = fm_host_reg_read(0x81026004, &reg_val); /* wr 0x81026004[0] 0x1	D0 */
-				reg_val |= 0x00000001;
-				ret = fm_host_reg_write(0x81026004, reg_val);
+				flag_spi_hopping = mt6631_switch_clk_64m() == 0;
 				break;
 			}
 			fm_delayus(10);
