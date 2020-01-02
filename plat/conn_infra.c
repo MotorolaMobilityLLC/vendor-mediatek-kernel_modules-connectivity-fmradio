@@ -923,9 +923,17 @@ static bool drv_set_own(void)
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
 	unsigned int val, tmp, i;
+	int ret = 0;
 
-	if (FM_LOCK(fm_wcn_ops.own_lock)) {
-		WCN_DBG(FM_ERR | CHIP, "set own mismatch\n");
+	ret = FM_LOCK(fm_wcn_ops.own_lock);
+	for (i = 0; ret && i < MAX_SET_OWN_COUNT; i++) {
+		fm_delayms(2);
+		ret = FM_LOCK(fm_wcn_ops.own_lock);
+	}
+
+	/* get lock fail */
+	if (i == MAX_SET_OWN_COUNT) {
+		WCN_DBG(FM_ERR | CHIP, "get own lock fail[%d]\n", ret);
 		return false;
 	}
 
