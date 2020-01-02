@@ -964,9 +964,8 @@ static bool drv_set_own(void)
 		return false;
 	}
 
-	drv_host_read(si, 0x1800F000, &val);
-	val |= 1 << 4;
-	drv_host_write(si, 0x1800F000, val);
+	/* conn_infra bus debug function setting */
+	conninfra_config_setup();
 
 	return true;
 }
