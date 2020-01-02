@@ -149,7 +149,7 @@ int fm_wcn_ops_register(void)
 
 int fm_wcn_ops_unregister(void)
 {
-	register_fw_ops_init();
+	register_fw_ops_uninit();
 
 	return 0;
 }
