@@ -922,10 +922,12 @@ static bool drv_set_own(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
-	unsigned int val, i;
+	unsigned int val, tmp, i;
 
-	if (FM_LOCK(fm_wcn_ops.own_lock))
+	if (FM_LOCK(fm_wcn_ops.own_lock)) {
+		WCN_DBG(FM_ERR | CHIP, "set own mismatch\n");
 		return false;
+	}
 
 	/* wakeup conninfra */
 	drv_host_write(si, 0x180601B0, 0x1);
@@ -940,6 +942,11 @@ static bool drv_set_own(void)
 	/* polling fail */
 	if (i == MAX_SET_OWN_COUNT) {
 		/* unlock if set own fail */
+		drv_host_read(si, 0x180601B0, &val);
+		drv_host_read(si, 0x18001808, &tmp);
+		WCN_DBG(FM_ERR | CHIP,
+			"polling chip id fail [0x180601B0]=[0x%08x], [0x18001808]=[0x%08x]\n",
+			val, tmp);
 		FM_UNLOCK(fm_wcn_ops.own_lock);
 		return false;
 	}

@@ -1178,6 +1178,11 @@ signed int fm_monostereo_get(struct fm *fm, unsigned short *ms)
 {
 	signed int ret = 0;
 
+	if (fm_pwr_state_get(fm) != FM_PWR_RX_ON) {
+		ret = -EPERM;
+		return ret;
+	}
+
 	if (fm_low_ops.bi.msget == NULL) {
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
 		return -FM_EPARA;
@@ -1204,6 +1209,11 @@ signed int fm_monostereo_get(struct fm *fm, unsigned short *ms)
 signed int fm_monostereo_set(struct fm *fm, signed int ms)
 {
 	signed int ret = 0;
+
+	if (fm_pwr_state_get(fm) != FM_PWR_RX_ON) {
+		ret = -EPERM;
+		return ret;
+	}
 
 	if (fm_low_ops.bi.msset == NULL) {
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
