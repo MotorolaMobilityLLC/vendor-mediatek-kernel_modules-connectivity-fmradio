@@ -152,6 +152,20 @@ static void drv_host_write(
 		new_addr, addr, data);
 }
 
+static int drv_sys_spi_read(
+	struct fm_spi_interface *si, unsigned int subsystem,
+	unsigned int addr, unsigned int *data)
+{
+	return conninfra_spi_read(subsystem, addr, data);
+}
+
+static int drv_sys_spi_write(
+	struct fm_spi_interface *si, unsigned int subsystem,
+	unsigned int addr, unsigned int data)
+{
+	return conninfra_spi_write(subsystem, addr, data);
+}
+
 /**
  * Send TX data via STP format
  *
@@ -862,8 +876,8 @@ static int drv_interface_init(void)
 	interface->host_read = drv_host_read;
 	interface->host_write = drv_host_write;
 #if CFG_FM_CONNAC2
-	interface->sys_spi_read = NULL;
-	interface->sys_spi_write = NULL;
+	interface->sys_spi_read = drv_sys_spi_read;
+	interface->sys_spi_write = drv_sys_spi_write;
 	interface->set_own = drv_set_own;
 	interface->clr_own = drv_clr_own;
 #else
