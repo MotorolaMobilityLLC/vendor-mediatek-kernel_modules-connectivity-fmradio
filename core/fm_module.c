@@ -1569,6 +1569,8 @@ static signed int mt_fm_init(void)
 		return ret;
 	}
 
+	fm_register_irq(&mt_fm_dev_drv);
+
 	WCN_DBG(FM_NTC | MAIN, "6. fm platform driver registered\n");
 	return ret;
 }
