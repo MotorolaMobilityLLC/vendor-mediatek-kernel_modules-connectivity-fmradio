@@ -225,6 +225,7 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			struct fm_cqi_req cqi_req;
 			signed char *buf = NULL;
 			signed int tmp;
+			unsigned int cpy_size = 0;
 
 			WCN_DBG(FM_INF | MAIN, "FM_IOCTL_CQI_GET\n");
 
@@ -257,7 +258,8 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				goto out;
 			}
 
-			if (copy_to_user((void *)cqi_req.cqi_buf, buf, cqi_req.ch_num * sizeof(struct fm_cqi))) {
+			cpy_size = cqi_req.ch_num * sizeof(struct fm_cqi);
+			if (copy_to_user((void *)cqi_req.cqi_buf, buf, cpy_size)) {
 				fm_free(buf);
 				ret = -EFAULT;
 				goto out;
