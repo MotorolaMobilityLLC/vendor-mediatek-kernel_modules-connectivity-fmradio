@@ -1246,6 +1246,7 @@ static ssize_t fm_proc_read(struct file *file, char __user *buf, size_t count, l
 
 static ssize_t fm_proc_write(struct file *file, const char *buffer, size_t count, loff_t *ppos)
 {
+	struct fm *fm = g_fm;
 	signed char tmp_buf[50] = { 0 };
 	unsigned int copysize;
 
@@ -1264,8 +1265,13 @@ static ssize_t fm_proc_write(struct file *file, const char *buffer, size_t count
 	}
 
 	if (strncmp(tmp_buf, "subsys reset", strlen("subsys reset")) == 0) {
-		fm_subsys_reset(g_fm);
+		fm_subsys_reset(fm);
 		return count;
+	}
+
+	if (!fm->chipon || (fm_pwr_state_get(fm) != FM_PWR_RX_ON)) {
+		WCN_DBG(FM_ERR | MAIN, "FM is off.\n");
+		return -EFAULT;
 	}
 
 	if (kstrtouint(tmp_buf, 0, &g_dbg_level)) {
