@@ -41,16 +41,46 @@
 #define FM_IRQ_NUMBER 0
 #define MAX_SET_OWN_COUNT    1000
 
-
 #if CFG_FM_CONNAC2
+static int (*whole_chip_reset)(signed int sta);
+
+static int fm_pre_whole_chip_rst(void)
+{
+	WCN_DBG(FM_WAR | LINK, "FM pre whole chip rst!\n");
+	if (whole_chip_reset)
+		whole_chip_reset(1);
+	return 0;
+}
+
+static int fm_post_whole_chip_rst(void)
+{
+	WCN_DBG(FM_WAR | LINK, "FM post whole chip rst!\n");
+	if (whole_chip_reset)
+		whole_chip_reset(0);
+	return 0;
+}
+
 static struct sub_drv_ops_cb fm_drv_cbs = {
-	.rst_cb.pre_whole_chip_rst = NULL,
-	.rst_cb.post_whole_chip_rst = NULL,
+	.rst_cb.pre_whole_chip_rst = fm_pre_whole_chip_rst,
+	.rst_cb.post_whole_chip_rst = fm_post_whole_chip_rst,
 	.pre_cal_cb.pwr_on_cb = NULL,
 	.pre_cal_cb.do_cal_cb = NULL,
 };
-#endif
 
+static int drv_sys_spi_read(
+	struct fm_spi_interface *si, unsigned int subsystem,
+	unsigned int addr, unsigned int *data)
+{
+	return conninfra_spi_read(subsystem, addr, data);
+}
+
+static int drv_sys_spi_write(
+	struct fm_spi_interface *si, unsigned int subsystem,
+	unsigned int addr, unsigned int data)
+{
+	return conninfra_spi_write(subsystem, addr, data);
+}
+#endif
 
 static void drv_spi_read(
 	struct fm_spi_interface *si, unsigned int addr, unsigned int *val)
@@ -150,20 +180,6 @@ static void drv_host_write(
 
 	WCN_DBG(FM_DBG | CHIP, "write [0x%08x/0x%08x]=[0x%08x]\n",
 		new_addr, addr, data);
-}
-
-static int drv_sys_spi_read(
-	struct fm_spi_interface *si, unsigned int subsystem,
-	unsigned int addr, unsigned int *data)
-{
-	return conninfra_spi_read(subsystem, addr, data);
-}
-
-static int drv_sys_spi_write(
-	struct fm_spi_interface *si, unsigned int subsystem,
-	unsigned int addr, unsigned int data)
-{
-	return conninfra_spi_write(subsystem, addr, data);
 }
 
 /**
@@ -914,6 +930,20 @@ static int drv_interface_uninit(void)
 
 #if CFG_FM_CONNAC2
 
+static int drv_stp_register_event_cb(void *cb)
+{
+	fm_wcn_ops.ei.eint_cb = (void (*)(void))cb;
+	return 0;
+}
+
+static int drv_msgcb_reg(void *data)
+{
+	/* get whole chip reset cb */
+	whole_chip_reset = data;
+	return conninfra_sub_drv_ops_register(
+		CONNDRV_TYPE_FM, &fm_drv_cbs);
+}
+
 static int drv_func_on(void)
 {
 	return conninfra_pwr_on(CONNDRV_TYPE_FM);
@@ -1108,9 +1138,7 @@ static int fm_stp_register_event_cb(void *cb)
 static int fm_wmt_msgcb_reg(void *data)
 {
 	/* get whole chip reset cb */
-	whole_chip_reset = data;
-	return mtk_wcn_wmt_msgcb_reg(
-		WMTDRV_TYPE_FM, WCNfm_wholechip_rst_cb);
+	return 0;
 }
 
 static int fm_wmt_func_on(void)
@@ -1182,15 +1210,14 @@ static void register_drv_ops_init(void)
 	ei->stp_recv_data = drv_stp_recv_data;
 
 #if CFG_FM_CONNAC2
-	ei->stp_register_event_cb = NULL;
-	ei->wmt_msgcb_reg = NULL;
+	ei->stp_register_event_cb = drv_stp_register_event_cb;
+	ei->wmt_msgcb_reg = drv_msgcb_reg;
 	ei->wmt_func_on = drv_func_on;
 	ei->wmt_func_off = drv_func_off;
 	ei->wmt_ic_info_get = NULL;
 	ei->wmt_chipid_query = drv_chipid_query;
 
 	fm_register_irq();
-	conninfra_sub_drv_ops_register(CONNDRV_TYPE_FM, &fm_drv_cbs);
 #else
 	ei->stp_register_event_cb = fm_stp_register_event_cb;
 	ei->wmt_msgcb_reg = fm_wmt_msgcb_reg;
