@@ -80,6 +80,10 @@ ifeq ($(FM_CHIP), mt0633)
     ccflags-y += -Dsoc
 endif
 
+ifeq ($(FM_CHIP), mt6631)
+    ccflags-y += -DMT6631_FM
+endif
+
 ifeq ($(FM_CHIP), mt6635)
     ccflags-y += -DMT6635_FM
 endif
