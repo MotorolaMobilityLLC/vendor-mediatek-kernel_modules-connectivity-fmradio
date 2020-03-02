@@ -236,7 +236,7 @@ static signed int mt6631_RampDown(void)
 		ret = fm_host_reg_read(0x80023008, &tem);
 		if (ret)
 			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80023008 failed\n", __func__);
-		ret = fm_host_reg_write(0x80023008, tem | (~(0x1 << 21)));
+		ret = fm_host_reg_write(0x80023008, tem & (~(0x1 << 21)));
 		if (ret)
 			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
 	}
@@ -966,7 +966,7 @@ static signed int mt6631_PowerDown(void)
 		ret = fm_host_reg_read(0x80023008, &tem);
 		if (ret)
 			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80023008 failed\n", __func__);
-		ret = fm_host_reg_write(0x80023008, tem | (~(0x1 << 21)));
+		ret = fm_host_reg_write(0x80023008, tem & (~(0x1 << 21)));
 		if (ret)
 			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
 	}
