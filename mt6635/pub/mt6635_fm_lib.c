@@ -226,6 +226,21 @@ static signed int mt6635_RampDown(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
 
+	/* disable rf_spi_div_en */
+	ret = fm_host_reg_read(0x81021100, &tem);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81021100 failed\n", __func__);
+	ret = fm_host_reg_write(0x81021100, tem & (~(0x1 << 16)));
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: enable rf_spi_div_en failed.\n", __func__);
+
+	/* set rgu_top_hwctl = 1 */
+	ret = fm_host_reg_read(0x81020010, &tem);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81020010 failed\n", __func__);
+	ret = fm_host_reg_write(0x81020010, tem | (0x1 << 17));
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: set rgu_top_hwctl failed.\n", __func__);
 	/* A0.0 Host control RF register */
 	ret = fm_set_bits(0x60, 0x0007, 0xFFF0);  /*Set 0x60 [D3:D0] = 0x7*/
 	if (ret) {
@@ -755,7 +770,6 @@ static signed int mt6635_PowerUp(unsigned short *chip_id, unsigned short *device
 	unsigned short tmp_reg = 0;
 	unsigned int tem = 0;
 	unsigned int host_reg = 0;
-	signed int projectid = fm_cb_op->projectid_get();
 
 	if (chip_id == NULL) {
 		WCN_DBG(FM_ERR | CHIP, "%s,invalid pointer\n", __func__);
@@ -897,7 +911,6 @@ static signed int mt6635_PowerDown(void)
 	signed int ret = 0;
 	unsigned int tem = 0;
 	unsigned short pkt_size;
-	signed int projectid = fm_cb_op->projectid_get();
 	unsigned int host_reg = 0;
 	/* unsigned int host_reg = 0; */
 
@@ -1043,6 +1056,22 @@ static bool mt6635_SetFreq(unsigned short freq)
 	/* SPI hoppint setting*/
 	if (mt6635_SPI_hopping_check(freq)) {
 		WCN_DBG(FM_NTC | CHIP, "%s: freq:%d is SPI hopping channel,turn on 64M PLL\n", __func__, freq);
+		/* set rgu_top_hwctl = 0 */
+		ret = fm_host_reg_read(0x81020010, &reg_val);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81020010 failed\n", __func__);
+		ret = fm_host_reg_write(0x81020010, reg_val & (~(0x1 << 17)));
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: set rgu_top_hwctl failed.\n", __func__);
+
+		/* enable rf_spi_div_en */
+		ret = fm_host_reg_read(0x81021100, &reg_val);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81021100 failed\n", __func__);
+		ret = fm_host_reg_write(0x81021100, reg_val | (0x1 << 16));
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: enable rf_spi_div_en failed.\n", __func__);
+
 		/* lock 64M */
 		ret = fm_host_reg_read(0x80023008, &reg_val);
 		if (ret)
@@ -1051,15 +1080,15 @@ static bool mt6635_SetFreq(unsigned short freq)
 		if (ret)
 			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
 
-		for (i = 0; i < 100; i++) { /*rd 0x80023118 until D27 ==1*/
+		for (i = 0; i < 100; i++) { /*rd 0x80021118 until D27 ==1*/
 
-			ret = fm_host_reg_read(0x80023118, &reg_val);
+			ret = fm_host_reg_read(0x80021118, &reg_val);
 
 			if (reg_val & 0x08000000) {
 				flag_spi_hopping = true;
 				WCN_DBG(FM_NTC | CHIP, "%s: POLLING PLL_RDY success !\n", __func__);
 				/* switch SPI clock to 64MHz */
-				ret = fm_host_reg_read(0x81026004, &reg_val); /* wr 0x81026004[0] 0x1	D0 */
+				ret = fm_host_reg_read(0x81026004, &reg_val); /* wr 0x81026004[0] 0x1   D0 */
 				reg_val |= 0x00000001;
 				ret = fm_host_reg_write(0x81026004, reg_val);
 				break;
@@ -1067,7 +1096,8 @@ static bool mt6635_SetFreq(unsigned short freq)
 			fm_delayus(10);
 		}
 		if (false == flag_spi_hopping)
-			WCN_DBG(FM_ERR | CHIP, "%s: Polling to read rd 0x8002110C[27] ==0x1 failed !\n", __func__);
+			WCN_DBG(FM_ERR | CHIP, "%s: Polling to read rd 0x80021118[27] ==0x1 failed!\n",
+			__func__);
 	}
 
 	/* A0. Host contrl RF register */
@@ -1515,6 +1545,22 @@ static signed int mt6635_soft_mute_tune(unsigned short freq, signed int *rssi, s
 	if (mt6635_SPI_hopping_check(freq)) {
 		WCN_DBG(FM_NTC | CHIP, "%s: freq:%d is SPI hopping channel,turn on 64M PLL\n", __func__, freq);
 
+		/* set rgu_top_hwctl = 0*/
+		ret = fm_host_reg_read(0x81020010, &reg_val);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81020010 failed\n", __func__);
+		ret = fm_host_reg_write(0x81020010, reg_val & (~(0x1 << 17)));
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: set rgu_top_hwctl failed.\n", __func__);
+
+		/* enable rf_spi_div_en */
+		ret = fm_host_reg_read(0x81021100, &reg_val);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81021100 failed\n", __func__);
+		ret = fm_host_reg_write(0x81021100, reg_val | (0x1 << 16));
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: enable rf_spi_div_en failed.\n", __func__);
+
 		/* lock 64M */
 		ret = fm_host_reg_read(0x80023008, &reg_val);
 		if (ret)
@@ -1523,9 +1569,9 @@ static signed int mt6635_soft_mute_tune(unsigned short freq, signed int *rssi, s
 		if (ret)
 			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
 
-		for (i = 0; i < 100; i++) { /*rd 0x80023118 until D27 ==1*/
+		for (i = 0; i < 100; i++) { /*rd 0x80021118 until D27 ==1*/
 
-			ret = fm_host_reg_read(0x80023118, &reg_val);
+			ret = fm_host_reg_read(0x80021118, &reg_val);
 
 			if (reg_val & 0x08000000) {
 				flag_spi_hopping = true;
@@ -1539,7 +1585,7 @@ static signed int mt6635_soft_mute_tune(unsigned short freq, signed int *rssi, s
 			fm_delayus(10);
 		}
 		if (false == flag_spi_hopping)
-			WCN_DBG(FM_ERR | CHIP, "%s: Polling to read rd 0x8002110C[27] ==0x1 failed !\n", __func__);
+			WCN_DBG(FM_ERR | CHIP, "%s: Polling to read rd 0x80021118[27] ==0x1 failed !\n", __func__);
 	}
 
 	if (FM_LOCK(cmd_buf_lock))
