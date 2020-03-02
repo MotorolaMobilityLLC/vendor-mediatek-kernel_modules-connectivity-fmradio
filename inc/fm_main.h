@@ -84,6 +84,14 @@ struct fm_tune_parm {
 	unsigned short freq;		/* IN/OUT parameter */
 };
 
+struct fm_tune_parm_old {
+	unsigned char err;
+	unsigned char band;
+	unsigned char space;
+	unsigned char hilo;
+	unsigned short freq;		/* IN/OUT parameter */
+};
+
 struct fm_seek_parm {
 	unsigned char err;
 	unsigned char band;
