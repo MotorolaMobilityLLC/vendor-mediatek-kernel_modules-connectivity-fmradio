@@ -226,14 +226,6 @@ static signed int mt6635_RampDown(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
 
-	/* disable rf_spi_div_en */
-	ret = fm_host_reg_read(0x81021100, &tem);
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81021100 failed\n", __func__);
-	ret = fm_host_reg_write(0x81021100, tem & (~(0x1 << 16)));
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: enable rf_spi_div_en failed.\n", __func__);
-
 	/* A0.0 Host control RF register */
 	ret = fm_set_bits(0x60, 0x0007, 0xFFF0);  /*Set 0x60 [D3:D0] = 0x7*/
 	if (ret) {
@@ -946,13 +938,6 @@ static signed int mt6635_PowerDown(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
 
-	/* disable rf_spi_div_en */
-	ret = fm_host_reg_read(0x81021100, &tem);   /* Set 0x81021100[16] = 0x0 */
-	tem = tem & 0xFFFEFFFF;
-	ret = fm_host_reg_write(0x81021100, tem);
-	if (ret)
-		WCN_DBG(FM_ALT | CHIP, "PowerDown: disable rf_spi_dev_en, set 0x81021100[16] = 0x0 failed\n");
-
 	/* Enable 26M crystal sleep */
 	WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0\n");
 	ret = fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
@@ -1057,13 +1042,6 @@ static bool mt6635_SetFreq(unsigned short freq)
 	/* SPI hoppint setting*/
 	if (mt6635_SPI_hopping_check(freq)) {
 		WCN_DBG(FM_NTC | CHIP, "%s: freq:%d is SPI hopping channel,turn on 64M PLL\n", __func__, freq);
-		/* enable rf_spi_div_en */
-		ret = fm_host_reg_read(0x81021100, &reg_val);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81021100 failed\n", __func__);
-		ret = fm_host_reg_write(0x81021100, reg_val | (0x1 << 16));
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: enable rf_spi_div_en failed.\n", __func__);
 
 		/* lock 64M */
 		ret = fm_host_reg_read(0x80023008, &reg_val);
@@ -1537,14 +1515,6 @@ static signed int mt6635_soft_mute_tune(unsigned short freq, signed int *rssi, s
 	/* SPI hoppint setting*/
 	if (mt6635_SPI_hopping_check(freq)) {
 		WCN_DBG(FM_NTC | CHIP, "%s: freq:%d is SPI hopping channel,turn on 64M PLL\n", __func__, freq);
-
-		/* enable rf_spi_div_en */
-		ret = fm_host_reg_read(0x81021100, &reg_val);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81021100 failed\n", __func__);
-		ret = fm_host_reg_write(0x81021100, reg_val | (0x1 << 16));
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: enable rf_spi_div_en failed.\n", __func__);
 
 		/* lock 64M */
 		ret = fm_host_reg_read(0x80023008, &reg_val);
