@@ -502,19 +502,6 @@ static signed int mt6635_pwrup_fine_tune_reg_op(unsigned char *buf, signed int b
 	pkt_size += fm_bop_write(0x03, 0xFAF5, &buf[pkt_size], buf_size - pkt_size);
 	pkt_size += fm_bop_write(0x05, 0x7A80, &buf[pkt_size], buf_size - pkt_size);
 
-	/* F3 DCOC @ LNA = 7 */
-	pkt_size += fm_bop_write(0x40, 0x01A0, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x03, 0xFAF5, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x07, 0x0100, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x01, 0xEEE8, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x3F, 0x3221, &buf[pkt_size], buf_size - pkt_size);
-	/* wait 1ms */
-	pkt_size += fm_bop_udelay(1000, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_rd_until(0x3F, 0x001F, 0x0001, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x3F, 0x0220, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x40, 0x0100, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x01, 0xAEE8, &buf[pkt_size], buf_size - pkt_size);
-
 	/* F4 set DSP control RF register */
 	pkt_size += fm_bop_write(0x60, 0x0000000F, &buf[pkt_size], buf_size - pkt_size);
 
@@ -975,6 +962,53 @@ static signed int mt6635_PowerDown(void)
 	return ret;
 }
 
+static signed int mt6635_set_freq_fine_tune_reg_op(unsigned char *buf, signed int buf_size)
+{
+	signed int pkt_size = 4;
+
+	if (buf == NULL) {
+		WCN_DBG(FM_ERR | CHIP, "%s invalid pointer\n", __func__);
+		return -1;
+	}
+	if (buf_size < TX_BUF_SIZE) {
+		WCN_DBG(FM_ERR | CHIP, "%s invalid buf size(%d)\n", __func__, buf_size);
+		return -2;
+	}
+
+	/* F3 DCOC @ LNA = 7 */
+	pkt_size += fm_bop_write(0x40, 0x01AF, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x03, 0xFAF5, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x07, 0x0100, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x01, 0xEEE8, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x3F, 0x3221, &buf[pkt_size], buf_size - pkt_size);
+	/* wait 1ms */
+	pkt_size += fm_bop_udelay(1000, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_rd_until(0x3F, 0x001F, 0x0001, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x3F, 0x0220, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x40, 0x0100, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x01, 0xAEE8, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x30, 0x0000, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x36, 0x017A, &buf[pkt_size], buf_size - pkt_size);
+
+	/* F4 set DSP control RF register */
+	pkt_size += fm_bop_write(0x60, 0x0000000F, &buf[pkt_size], buf_size - pkt_size);
+
+	return pkt_size - 4;
+}
+
+/*
+ * mt6635_set_freq_fine_tune - FM RF fine tune setting
+ * @buf - target buf
+ * @buf_size - buffer size
+ * return package size
+ */
+static signed int mt6635_set_freq_fine_tune(unsigned char *buf, signed int buf_size)
+{
+	signed int pkt_size = 0;
+
+	pkt_size = mt6635_set_freq_fine_tune_reg_op(buf, buf_size);
+	return fm_op_seq_combine_cmd(buf, FM_ENABLE_OPCODE, pkt_size);
+}
 static bool mt6635_SetFreq(unsigned short freq)
 {
 	signed int ret = 0;
@@ -988,6 +1022,36 @@ static bool mt6635_SetFreq(unsigned short freq)
 
 	fm_cb_op->cur_freq_set(freq);
 
+	/* FM VCO Calibration */
+	fm_set_bits(0x60, 0x0007, 0xFFF0);  /* Set 0x60 [D3:D0] = 0x07*/
+	fm_delayus(5);
+	if (freq >= 750) {
+		fm_reg_write(0x37, 0xF68C);
+		fm_reg_write(0x38, 0x0B53);
+		fm_set_bits(0x30, 0x0014 << 8, 0xC0FF);
+	} else {
+		fm_reg_write(0x37, 0x0675);
+		fm_reg_write(0x38, 0x0F54);
+		fm_set_bits(0x30, 0x001C << 8, 0xC0FF);
+	}
+	fm_set_bits(0x30, 0x0001 << 14, 0xBFFF);
+	fm_reg_write(0x40, 0x010F);
+	fm_delayus(5);
+	fm_reg_write(0x36, 0x037A);
+	fm_reg_write(0x32, 0x8000);
+	fm_delayus(200);
+	fm_set_bits(0x3D, 0x0001 << 2, 0xFFFB);
+	fm_reg_write(0x32, 0x0000);
+
+	if (FM_LOCK(cmd_buf_lock))
+		return -FM_ELOCK;
+	pkt_size = mt6635_set_freq_fine_tune(cmd_buf, TX_BUF_SIZE);
+	ret = fm_cmd_tx(cmd_buf, pkt_size, FLAG_EN, SW_RETRY_CNT, EN_TIMEOUT, NULL);
+	FM_UNLOCK(cmd_buf_lock);
+	if (ret) {
+		WCN_DBG(FM_ALT | CHIP, "mt6635_pwrup_fine_tune failed\n");
+		return ret;
+	}
 
 	/* A0. Host contrl RF register */
 	ret = fm_set_bits(0x60, 0x0007, 0xFFF0);  /* Set 0x60 [D3:D0] = 0x07*/
