@@ -1442,7 +1442,6 @@ static bool mt6631_is_valid_freq(unsigned short freq)
 	signed int RSSI = 0, PAMD = 0, MR = 0;
 	unsigned int PRX = 0;
 	unsigned short softmuteGainLvl = 0;
-
 	unsigned short tmp_reg = 0;
 
 	for (i = 0; i < 8; i++) {
@@ -1466,10 +1465,10 @@ static bool mt6631_is_valid_freq(unsigned short freq)
 		&& (fm_config.rx_cfg.smg_th <= softmuteGainLvl)) {
 		valid = true;
 	}
-	WCN_DBG(FM_NTC | CHIP,
+
+	WCN_DBG(FM_DBG | CHIP,
 			"freq %d valid=%d, %d, %d, 0x%04x, 0x%04x, 0x%04x\n",
 			freq, valid, RSSI, PAMD, PRX, MR, softmuteGainLvl);
-
 
 	return valid;
 }
