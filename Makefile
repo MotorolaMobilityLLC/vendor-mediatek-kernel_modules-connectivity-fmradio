@@ -57,7 +57,6 @@ endif
 
     MODULE_NAME := fmradio_drv
     obj-m += $(MODULE_NAME).o
-    WMT_SRC_FOLDER := $(TOP)/vendor/mediatek/kernel_modules/connectivity/common
 
     FM_CHIP_MACRO := $(subst ",,$(CONFIG_MTK_FM_CHIP))
     FM_CHIP := $(subst _FM,,$(subst MT,mt,$(subst ",,$(CONFIG_MTK_FM_CHIP))))
@@ -88,13 +87,11 @@ ifeq ($(FM_CHIP), mt6635)
     ccflags-y += -DMT6635_FM
 endif
 
-    WMT_INCLUDE_PATH := common_main
     FM_CHIP_PATH := $(FM_CHIP)/pub/$(FM_CHIP)
     ccflags-y += -D$(FM_CHIP_MACRO)
     ccflags-y += -I$(src)/inc \
-                    -I$(src)/$(FM_CHIP)/inc \
-                    -I$(WMT_SRC_FOLDER)/$(WMT_INCLUDE_PATH)/include \
-                    -I$(WMT_SRC_FOLDER)/$(WMT_INCLUDE_PATH)/linux/include
+                 -I$(src)/chips/$(FM_CHIP)/inc \
+                 -I$(src)/plat/inc
 
     $(FM_CHIP)-objs    := core/fm_module.o \
                     core/fm_main.o \
@@ -105,8 +102,27 @@ endif
                     core/fm_link.o \
                     core/fm_eint.o \
                     core/fm_cmd.o \
-                    $(FM_CHIP_PATH)_fm_lib.o \
-                    $(FM_CHIP_PATH)_fm_rds.o
+                    core/fm_reg_utils.o \
+                    chips/$(FM_CHIP_PATH)_fm_rds.o
+
+ifeq ($(CFG_BUILD_CONNAC2), true)
+    CONNINFRA_SRC_FOLDER := $(TOP)/vendor/mediatek/kernel_modules/connectivity/conninfra
+
+    ccflags-y += -I$(CONNINFRA_SRC_FOLDER)/include
+    ccflags-y += -DCFG_FM_CONNAC2=1
+    $(FM_CHIP)-objs += chips/$(FM_CHIP_PATH)_2_fm_lib.o
+    $(FM_CHIP)-objs += plat/conn_infra.o
+else
+    WMT_SRC_FOLDER := $(TOP)/vendor/mediatek/kernel_modules/connectivity/common
+    WMT_INCLUDE_PATH := common_main
+
+    ccflags-y += -I$(WMT_SRC_FOLDER)/$(WMT_INCLUDE_PATH)/include \
+                 -I$(WMT_SRC_FOLDER)/$(WMT_INCLUDE_PATH)/linux/include
+    ccflags-y += -DCFG_FM_CONNAC2=0
+    $(FM_CHIP)-objs += chips/$(FM_CHIP_PATH)_fm_lib.o
+    $(FM_CHIP)-objs += plat/legacy_wmt.o
+endif
+
     $(MODULE_NAME)-objs += $($(FM_CHIP)-objs)
     #obj-$(CONFIG_MTK_FMRADIO) += private/
 endif

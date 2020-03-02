@@ -271,6 +271,8 @@ extern signed int fm_low_ops_register(struct fm_callback *cb, struct fm_basic_in
 extern signed int fm_low_ops_unregister(struct fm_basic_interface *bi);
 extern signed int fm_rds_ops_register(struct fm_basic_interface *bi, struct fm_rds_interface *ri);
 extern signed int fm_rds_ops_unregister(struct fm_rds_interface *ri);
+extern signed int fm_wcn_ops_register(void);
+extern signed int fm_wcn_ops_unregister(void);
 
 /*
  * fm_get_channel_space - get the spcace of gived channel

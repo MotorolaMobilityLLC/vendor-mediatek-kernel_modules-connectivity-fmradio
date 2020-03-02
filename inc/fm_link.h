@@ -32,6 +32,7 @@ enum {
 	FM_TASK_EVENT_PKT_TYPE = 0x04
 };
 
+/* FM opcode */
 enum {
 	FM_STP_TEST_OPCODE = 0x00,
 	FSPI_ENABLE_OPCODE = 0x01,
@@ -60,6 +61,7 @@ enum {
 	FM_HOST_WRITE_OPCODE = 0x19,
 	CSPI_WRITE_OPCODE = 0x20,
 	CSPI_READ_OPCODE = 0x21,	/* common SPI read */
+	FM_HOST_MODIFY_OPCODE = 0x22,
 	FM_READ_PMIC_CR_OPCODE = 0x23,
 	FM_WRITE_PMIC_CR_OPCODE = 0x24,
 	FM_MODIFY_PMIC_CR_OPCODE = 0x25,
@@ -207,6 +209,7 @@ struct fm_trace_fifo_t {
 #define HWCOEFF_TIMEOUT         (3)
 #define ROM_TIMEOUT             (3)
 #define PMIC_CONTROL_TIMEOUT    (3)
+
 
 struct fm_link_event {
 	struct fm_flag_event *ln_event;
