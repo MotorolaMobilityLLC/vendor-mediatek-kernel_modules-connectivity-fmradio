@@ -785,7 +785,7 @@ static signed int mt6630_PowerUp(unsigned short *chip_id, unsigned short *device
 		mt6630_I2s_Setting(FM_I2S_ON, fm_config.aud_cfg.i2s_info.mode,
 				   fm_config.aud_cfg.i2s_info.rate);
 		/* mt_combo_audio_ctrl(COMBO_AUDIO_STATE_2); */
-		mtk_wcn_cmb_stub_audio_ctrl((CMB_STUB_AIF_X) CMB_STUB_AIF_2);
+		mtk_wcn_cmb_stub_audio_ctrl((enum CMB_STUB_AIF_X) CMB_STUB_AIF_2);
 	}
 	/* Wholechip FM Power Up: step 4, FM Digital Init: fm_rgf_maincon */
 	if (FM_LOCK(cmd_buf_lock))
