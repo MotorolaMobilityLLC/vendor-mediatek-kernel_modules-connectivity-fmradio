@@ -85,6 +85,8 @@ static struct fm_chip_mapping fm_support_chip_array[] = {
 };
 #endif
 
+unsigned char top_index;
+
 /* RDS reset related functions */
 static unsigned short fm_cur_freq_get(void);
 static signed int fm_cur_freq_set(unsigned short new_freq);
@@ -323,6 +325,11 @@ signed int fm_open(struct fm *fmp)
 		fmp->projectid = chipid;
 		WCN_DBG(FM_NTC | MAIN, "wmt chip id=0x%x\n", chipid);
 
+		if (chipid == 0x6779)
+			top_index = 5;
+		else
+			top_index = 4;
+		WCN_DBG(FM_NTC | MAIN, "mcu top index = 0x%x\n", top_index);
 		/* what's the purpose of put chipid to fmp->chip_id ? */
 		fmp->chip_id = fm_which_chip(chipid, NULL);
 		WCN_DBG(FM_NTC | MAIN, "fm chip id=0x%x\n", fmp->chip_id);
