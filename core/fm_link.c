@@ -230,6 +230,7 @@ signed int fm_event_parser(signed int(*rds_parser) (struct rds_rx_t *, signed in
 	unsigned short length = 0;
 	unsigned char ch;
 	unsigned char rx_buf[RX_BUF_SIZE + 10] = { 0 };	/* the 10 bytes are protect gaps */
+	unsigned int rx_len = 0;
 
 	static enum fm_task_parser_state state = FM_TASK_RX_PARSER_PKT_TYPE;
 	struct fm_trace_t trace;
@@ -287,7 +288,9 @@ signed int fm_event_parser(signed int(*rds_parser) (struct rds_rx_t *, signed in
 			trace.len = length;
 			trace.tid = (signed int) task->pid;
 			fm_memset(trace.pkt, 0, FM_TRACE_PKT_SIZE);
-			fm_memcpy(trace.pkt, &rx_buf[i], (length > FM_TRACE_PKT_SIZE) ? FM_TRACE_PKT_SIZE : length);
+			rx_len = (length > FM_TRACE_PKT_SIZE) ? FM_TRACE_PKT_SIZE : length;
+			rx_len = (rx_len > (sizeof(rx_buf) - i)) ? sizeof(rx_buf) - i : rx_len;
+			fm_memcpy(trace.pkt, &rx_buf[i], rx_len);
 
 			if (true == FM_TRACE_FULL(evt_fifo))
 				FM_TRACE_OUT(evt_fifo, NULL);
