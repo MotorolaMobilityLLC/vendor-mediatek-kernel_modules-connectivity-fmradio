@@ -892,7 +892,16 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case FM_IOCTL_DUMP_REG:
 		{
 			WCN_DBG(FM_NTC | MAIN, "......FM_IOCTL_DUMP_REG......\n");
-
+			if (g_dbg_level != 0xfffffff7) {
+				WCN_DBG(FM_ERR | MAIN, "Not support FM_IOCTL_HOST_RDWR\n");
+				ret = -EFAULT;
+				goto out;
+			}
+			if (fm->chipon == false || fm_pwr_state_get(fm) == FM_PWR_OFF) {
+				WCN_DBG(FM_ERR | MAIN, "ERROR, FM chip is OFF\n");
+				ret = -EFAULT;
+				goto out;
+			}
 			ret = fm_dump_reg();
 			if (ret)
 				WCN_DBG(FM_ALT | MAIN, "fm_dump_reg err\n");
