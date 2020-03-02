@@ -234,13 +234,6 @@ static signed int mt6635_RampDown(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: enable rf_spi_div_en failed.\n", __func__);
 
-	/* set rgu_top_hwctl = 1 */
-	ret = fm_host_reg_read(0x81020010, &tem);
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81020010 failed\n", __func__);
-	ret = fm_host_reg_write(0x81020010, tem | (0x1 << 17));
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: set rgu_top_hwctl failed.\n", __func__);
 	/* A0.0 Host control RF register */
 	ret = fm_set_bits(0x60, 0x0007, 0xFFF0);  /*Set 0x60 [D3:D0] = 0x7*/
 	if (ret) {
@@ -952,6 +945,13 @@ static signed int mt6635_PowerDown(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
 
+	/* disable rf_spi_div_en */
+	ret = fm_host_reg_read(0x81021100, &tem);   /* Set 0x81021100[16] = 0x0 */
+	tem = tem & 0xFFFEFFFF;
+	ret = fm_host_reg_write(0x81021100, tem);
+	if (ret)
+		WCN_DBG(FM_ALT | CHIP, "PowerDown: disable rf_spi_dev_en, set 0x81021100[16] = 0x0 failed\n");
+
 	/* Enable 26M crystal sleep */
 	WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0\n");
 	ret = fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
@@ -959,7 +959,7 @@ static signed int mt6635_PowerDown(void)
 	ret = fm_host_reg_write(0x81021200, tem);
 
 	if (ret)
-		WCN_DBG(FM_ALT | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021234[7] = 0x0 failed\n");
+		WCN_DBG(FM_ALT | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0 failed\n");
 
 	/* A0:set audio output I2X Rx mode: */
 	if (FM_LOCK(cmd_buf_lock))
@@ -1056,14 +1056,6 @@ static bool mt6635_SetFreq(unsigned short freq)
 	/* SPI hoppint setting*/
 	if (mt6635_SPI_hopping_check(freq)) {
 		WCN_DBG(FM_NTC | CHIP, "%s: freq:%d is SPI hopping channel,turn on 64M PLL\n", __func__, freq);
-		/* set rgu_top_hwctl = 0 */
-		ret = fm_host_reg_read(0x81020010, &reg_val);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81020010 failed\n", __func__);
-		ret = fm_host_reg_write(0x81020010, reg_val & (~(0x1 << 17)));
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: set rgu_top_hwctl failed.\n", __func__);
-
 		/* enable rf_spi_div_en */
 		ret = fm_host_reg_read(0x81021100, &reg_val);
 		if (ret)
@@ -1544,14 +1536,6 @@ static signed int mt6635_soft_mute_tune(unsigned short freq, signed int *rssi, s
 	/* SPI hoppint setting*/
 	if (mt6635_SPI_hopping_check(freq)) {
 		WCN_DBG(FM_NTC | CHIP, "%s: freq:%d is SPI hopping channel,turn on 64M PLL\n", __func__, freq);
-
-		/* set rgu_top_hwctl = 0*/
-		ret = fm_host_reg_read(0x81020010, &reg_val);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: read reg 0x81020010 failed\n", __func__);
-		ret = fm_host_reg_write(0x81020010, reg_val & (~(0x1 << 17)));
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: set rgu_top_hwctl failed.\n", __func__);
 
 		/* enable rf_spi_div_en */
 		ret = fm_host_reg_read(0x81021100, &reg_val);
