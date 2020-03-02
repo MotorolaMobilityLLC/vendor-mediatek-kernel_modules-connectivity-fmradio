@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #include "fm_main.h"
 #include "fm_err.h"
@@ -95,7 +96,11 @@ static unsigned short fm_cur_freq_get(void);
 static signed int fm_cur_freq_set(unsigned short new_freq);
 static enum fm_op_state fm_op_state_get(struct fm *fmp);
 static enum fm_op_state fm_op_state_set(struct fm *fmp, enum fm_op_state sta);
+#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
+static void fm_timer_func(struct timer_list *timer);
+#else
 static void fm_timer_func(unsigned long data);
+#endif
 static void fm_enable_rds_BlerCheck(struct fm *fm);
 static void fm_disable_rds_BlerCheck(void);
 static void fm_rds_reset_work_func(unsigned long data);
@@ -1862,7 +1867,11 @@ signed int fm_rdstx_enable(struct fm *fm, signed int enable)
 	return 0;
 }
 
+#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
+static void fm_timer_func(struct timer_list *timer)
+#else
 static void fm_timer_func(unsigned long data)
+#endif
 {
 	struct fm *fm = g_fm_struct;
 
@@ -1884,7 +1893,11 @@ out:
 }
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
+#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
+static void fm_cqi_check_timer_func(struct timer_list *timer)
+#else
 static void fm_cqi_check_timer_func(unsigned long data)
+#endif
 {
 	struct fm *fm = g_fm_struct;
 

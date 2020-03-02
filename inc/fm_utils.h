@@ -14,6 +14,8 @@
 #ifndef __FM_UTILS_H__
 #define __FM_UTILS_H__
 
+#include <linux/version.h>
+
 #include "fm_typedef.h"
 
 /**
@@ -257,7 +259,11 @@ struct fm_timer {
 	void *priv;		/* platform detail impliment */
 
 	signed int flag;		/* timer active/inactive */
+#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
+	void (*timeout_func)(struct timer_list *timer);	/* timeout function */
+#else
 	void (*timeout_func)(unsigned long data);	/* timeout function */
+#endif
 	unsigned long data;	/* timeout function's parameter */
 	signed long timeout_ms;	/* timeout tick */
 	/* Tx parameters */
@@ -267,8 +273,13 @@ struct fm_timer {
 	unsigned char tx_desense_en;
 
 	/* timer methods */
+#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
+	signed int (*init)(struct fm_timer *thiz, void (*timeout) (struct timer_list *timer),
+		unsigned long data, signed long time, signed int flag);
+#else
 	signed int (*init)(struct fm_timer *thiz, void (*timeout) (unsigned long data),
 		unsigned long data, signed long time, signed int flag);
+#endif
 	signed int (*start)(struct fm_timer *thiz);
 	signed int (*update)(struct fm_timer *thiz);
 	signed int (*stop)(struct fm_timer *thiz);
