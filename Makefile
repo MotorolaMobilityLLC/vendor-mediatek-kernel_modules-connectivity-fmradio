@@ -80,6 +80,10 @@ ifeq ($(FM_CHIP), mt0633)
     ccflags-y += -Dsoc
 endif
 
+ifeq ($(FM_CHIP), mt6635)
+    ccflags-y += -DMT6635_FM
+endif
+
     WMT_INCLUDE_PATH := common_main
     FM_CHIP_PATH := $(FM_CHIP)/pub/$(FM_CHIP)
     ccflags-y += -D$(FM_CHIP_MACRO)
