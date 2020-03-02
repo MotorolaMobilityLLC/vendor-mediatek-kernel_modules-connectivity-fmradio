@@ -157,6 +157,7 @@ struct fm {
 	struct fm_work *rds_wk;
 	struct fm_work *rst_wk;	/* work for subsystem reset */
 	struct fm_work *pwroff_wk;
+	struct fm_work *ch_valid_check_wk;
 	/* Tx */
 	struct fm_work *fm_tx_desense_wifi_work;
 	struct fm_work *fm_tx_power_ctrl_work;
@@ -234,6 +235,8 @@ struct fm_basic_interface {
 							unsigned short scandir, unsigned short space);
 	signed int (*rds_tx_adapter)(unsigned short pi, unsigned short *ps, unsigned short *other_rds,
 							unsigned char other_rds_cnt);
+	bool (*is_valid_freq)(unsigned short freq);
+
 };
 
 struct fm_rds_interface {

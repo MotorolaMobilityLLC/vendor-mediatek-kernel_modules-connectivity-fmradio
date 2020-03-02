@@ -39,6 +39,7 @@ static struct fm_lock *fm_rxtx_lock;	/* protect FM RX TX mode switch */
 static struct fm_lock *fm_rtc_mutex;	/* protect FM GPS RTC drift info */
 
 static struct fm_timer *fm_timer_sys;
+static struct fm_timer *fm_cqi_check_timer;
 
 static bool scan_stop_flag; /* false */
 static struct fm_gps_rtc_info gps_rtc_info;
@@ -1564,6 +1565,8 @@ signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 	signed int len;
 	struct rds_raw_t rds_log;
 
+	fm_cqi_check_timer->stop(fm_cqi_check_timer);
+
 	if (fm_low_ops.bi.mute == NULL) {
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
 		return -FM_EPARA;
@@ -1615,6 +1618,17 @@ signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 		parm->err = FM_TUNE_FAILED;
 		WCN_DBG(FM_ALT | MAIN, "FM tune failed\n");
 		ret = -FM_EFW;
+	}
+
+	if (fm_low_ops.bi.is_valid_freq && !fm_low_ops.bi.is_valid_freq(parm->freq)) {
+		WCN_DBG(FM_NTC | MAIN, "FM tune to an invalid channel.\n");
+		fm_low_ops.bi.volset(5);
+		fm->vol = 5;
+		fm_cqi_check_timer->start(fm_cqi_check_timer);
+	} else {
+		fm_low_ops.bi.volset(15);
+		fm->vol = 15;
+		WCN_DBG(FM_NTC | MAIN, "FM tune to a valid channel resume volume.\n");
 	}
 	/* fm_low_ops.bi.mute(false);//open for dbg */
 	fm_op_state_set(fm, FM_STA_PLAY);
@@ -1694,6 +1708,8 @@ signed int fm_restore_search(struct fm *fm)
 signed int fm_soft_mute_tune(struct fm *fm, struct fm_softmute_tune_t *parm)
 {
 	signed int ret = 0;
+
+	fm_cqi_check_timer->stop(fm_cqi_check_timer);
 
 	if (fm_low_ops.bi.softmute_tune == NULL) {
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
@@ -1833,6 +1849,27 @@ static void fm_timer_func(unsigned long data)
 	if (fm != NULL) {
 		WCN_DBG(FM_DBG | MAIN, "timer:rds_wk\n");
 		fm->timer_wkthd->add_work(fm->timer_wkthd, fm->rds_wk);
+	}
+
+out:
+	FM_UNLOCK(fm_timer_lock);
+}
+
+static void fm_cqi_check_timer_func(unsigned long data)
+{
+	struct fm *fm = g_fm_struct;
+
+	if (FM_LOCK(fm_timer_lock))
+		return;
+
+	if (fm_cqi_check_timer->update(fm_cqi_check_timer)) {
+		WCN_DBG(FM_NTC | MAIN, "timer skip\n");
+		goto out;	/* fm timer is stopped before timeout */
+	}
+
+	if (fm != NULL) {
+		WCN_DBG(FM_DBG | MAIN, "timer:ch_valid_check_wk\n");
+		fm->timer_wkthd->add_work(fm->timer_wkthd, fm->ch_valid_check_wk);
 	}
 
 out:
@@ -2063,6 +2100,26 @@ void fm_rds_reset_work_func(unsigned long data)
 	FM_UNLOCK(fm_rxtx_lock);
 }
 
+void fm_cqi_check_work_func(unsigned long data)
+{
+	if (FM_LOCK(fm_ops_lock))
+		return;
+
+	if (fm_low_ops.bi.is_valid_freq) {
+		if (!fm_low_ops.bi.is_valid_freq(g_fm_struct->cur_freq)) {
+			if (g_fm_struct->vol != 5)
+				fm_low_ops.bi.volset(5);
+			WCN_DBG(FM_NTC | MAIN, "Not a valid freq, volset: 5\n");
+		} else {
+			if (g_fm_struct->vol != 15)
+				fm_low_ops.bi.volset(15);
+			WCN_DBG(FM_NTC | MAIN, "Valid freq, volset: 15\n");
+		}
+	}
+
+	FM_UNLOCK(fm_ops_lock);
+}
+
 void fm_subsys_reset_work_func(unsigned long data)
 {
 	g_dbg_level = 0xffffffff;
@@ -2124,6 +2181,7 @@ void fm_subsys_reset_work_func(unsigned long data)
 		WCN_DBG(FM_NTC | MAIN, "initial timer fail!!!\n");
 	}
 
+	fm_cqi_check_timer->init(fm_cqi_check_timer, fm_cqi_check_timer_func, (unsigned long)g_fm_struct, 1000, 0);
 	g_fm_struct->rds_on = 1;
 	fm_low_ops.ri.rds_onoff(g_fm_struct->pstRDSData, g_fm_struct->rds_on);
 
@@ -2377,6 +2435,17 @@ struct fm *fm_dev_init(unsigned int arg)
 		fm->rds_wk->init(fm->rds_wk, fm_rds_reset_work_func, (unsigned long)fm);
 	}
 
+	fm->ch_valid_check_wk = fm_work_create("fm_ch_valid_check_work");
+	if (!fm->ch_valid_check_wk) {
+		WCN_DBG(FM_ALT | MAIN, "-ENOMEM for ch_valid_check_wk\n");
+		ret = -ENOMEM;
+		goto ERR_EXIT;
+	} else {
+		fm_work_get(fm->ch_valid_check_wk);
+		fm->ch_valid_check_wk->init(fm->ch_valid_check_wk,
+			fm_cqi_check_work_func, (unsigned long)fm);
+	}
+
 	fm->fm_tx_power_ctrl_work = fm_work_create("tx_pwr_ctl_work");
 	if (!fm->fm_tx_power_ctrl_work) {
 		WCN_DBG(FM_ALT | MAIN, "-ENOMEM for tx_pwr_ctl_work\n");
@@ -2448,6 +2517,12 @@ ERR_EXIT:
 			fm->rds_wk = NULL;
 	}
 
+	if (fm->ch_valid_check_wk) {
+		ret = fm_work_put(fm->ch_valid_check_wk);
+		if (!ret)
+			fm->ch_valid_check_wk = NULL;
+	}
+
 	if (fm->rst_wk) {
 		ret = fm_work_put(fm->rst_wk);
 		if (!ret)
@@ -2489,6 +2564,7 @@ signed int fm_dev_destroy(struct fm *fm)
 	WCN_DBG(FM_DBG | MAIN, "%s\n", __func__);
 
 	fm_timer_sys->stop(fm_timer_sys);
+	fm_timer_sys->stop(fm_cqi_check_timer);
 	if (!fm) {
 		WCN_DBG(FM_NTC | MAIN, "fm is null\n");
 		return -1;
@@ -2516,6 +2592,12 @@ signed int fm_dev_destroy(struct fm *fm)
 		ret = fm_work_put(fm->rds_wk);
 		if (!ret)
 			fm->rds_wk = NULL;
+	}
+
+	if (fm->ch_valid_check_wk) {
+		ret = fm_work_put(fm->ch_valid_check_wk);
+		if (!ret)
+			fm->ch_valid_check_wk = NULL;
 	}
 
 	if (fm->rst_wk) {
@@ -2603,6 +2685,13 @@ signed int fm_env_setup(void)
 		return -1;
 
 	fm_timer_get(fm_timer_sys);
+
+	fm_cqi_check_timer = fm_timer_create("fm_cqi_check_timer");
+	if (!fm_cqi_check_timer)
+		return -1;
+	fm_timer_get(fm_cqi_check_timer);
+	fm_cqi_check_timer->init(fm_cqi_check_timer, fm_cqi_check_timer_func, (unsigned long)g_fm_struct, 500, 0);
+
 	WCN_DBG(FM_NTC | MAIN, "fm timer created\n");
 
 	ret = fm_link_setup((void *)fm_wholechip_rst_cb);
@@ -2656,6 +2745,10 @@ signed int fm_env_destroy(void)
 	ret = fm_timer_put(fm_timer_sys);
 	if (!ret)
 		fm_timer_sys = NULL;
+
+	ret = fm_timer_put(fm_cqi_check_timer);
+	if (!ret)
+		fm_cqi_check_timer = NULL;
 
 	return ret;
 }

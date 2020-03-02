@@ -1393,6 +1393,60 @@ static signed int mt6631_full_cqi_get(signed int min_freq, signed int max_freq, 
 	return ret;
 }
 
+static unsigned short mt6631_read_dsp_reg(unsigned short addr)
+{
+	unsigned short regValue = 0;
+
+	fm_reg_write(0x60, 0x07);
+	fm_reg_write(0xE2, addr);
+	fm_reg_write(0xE1, 0x01);
+	fm_reg_read(0xE4, &regValue);
+	fm_reg_write(0x60, 0x0F);
+
+	return regValue;
+}
+
+
+static bool mt6631_is_valid_freq(unsigned short freq)
+{
+	int i = 0;
+	bool valid = false;
+	signed int RSSI = 0, PAMD = 0, MR = 0;
+	unsigned int PRX = 0;
+	unsigned short softmuteGainLvl = 0;
+
+	unsigned short tmp_reg = 0;
+
+	for (i = 0; i < 8; i++) {
+		fm_reg_read(0x6C, &tmp_reg);
+		RSSI += (((tmp_reg & 0x03FF) >= 512) ? ((tmp_reg & 0x03FF) - 1024) : (tmp_reg & 0x03FF)) >> 3;
+		fm_reg_read(0xB4, &tmp_reg);
+		PAMD += (((tmp_reg & 0x1FF) >= 256) ? ((tmp_reg & 0x01FF) - 512) : (tmp_reg & 0x01FF)) >> 3;
+		tmp_reg = mt6631_read_dsp_reg(0x4E1);
+		PRX += (tmp_reg & 0x00FF) >> 3;
+		fm_reg_read(0xBD, &tmp_reg);
+		MR += (((tmp_reg & 0x01FF) >= 256) ? ((tmp_reg & 0x01FF) - 512) : (tmp_reg & 0x01FF)) >> 3;
+		tmp_reg = mt6631_read_dsp_reg(0x2C4);
+		softmuteGainLvl += tmp_reg >> 3;
+		fm_delayus(2250);
+	}
+
+	if ((fm_config.rx_cfg.long_ana_rssi_th <= RSSI)
+		&& (fm_config.rx_cfg.pamd_th >= PAMD)
+		&& (fm_config.rx_cfg.mr_th <= MR)
+		&& (fm_config.rx_cfg.prx_th <= PRX)
+		&& (fm_config.rx_cfg.smg_th <= softmuteGainLvl)) {
+		valid = true;
+	}
+	WCN_DBG(FM_NTC | CHIP,
+			"freq %d valid=%d, %d, %d, 0x%04x, 0x%04x, 0x%04x\n",
+			freq, valid, RSSI, PAMD, PRX, MR, softmuteGainLvl);
+
+
+	return valid;
+}
+
+
 /*
  * mt6631_GetCurRSSI - get current freq's RSSI value
  * RS=RSSI
@@ -1839,6 +1893,7 @@ signed int fm_low_ops_register(struct fm_callback *cb, struct fm_basic_interface
 	bi->pre_search = mt6631_pre_search;
 	bi->restore_search = mt6631_restore_search;
 	bi->set_search_th = mt6631_set_search_th;
+	bi->is_valid_freq = mt6631_is_valid_freq;
 
 	cmd_buf_lock = fm_lock_create("31_cmd");
 	ret = fm_lock_get(cmd_buf_lock);
