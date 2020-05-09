@@ -27,6 +27,8 @@ endif
 KBUILD_MODPOST_FAIL_ON_WARNINGS := y
 ###############################################################################
 
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+
 # only WMT align this design flow
 #ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE
 
