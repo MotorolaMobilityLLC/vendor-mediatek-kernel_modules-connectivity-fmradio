@@ -1318,7 +1318,7 @@ static ssize_t fm_proc_read(struct file *file, char __user *buf, size_t count, l
 static ssize_t fm_proc_write(struct file *file, const char *buffer, size_t count, loff_t *ppos)
 {
 	struct fm *fm = g_fm;
-	signed char tmp_buf[50] = { 0 };
+	signed char tmp_buf[51] = { 0 };
 	unsigned int copysize;
 
 	WCN_DBG(FM_NTC | MAIN, "fm_proc_write:0 count = %zu\n", count);
@@ -1346,6 +1346,7 @@ static ssize_t fm_proc_write(struct file *file, const char *buffer, size_t count
 	}
 
 	if (kstrtouint(tmp_buf, 0, &g_dbg_level)) {
+		tmp_buf[50] = '\0';
 		WCN_DBG(FM_ERR | MAIN, "Not a valid dbg_level: %s\n", tmp_buf);
 		if (!fm_cust_config_setup(tmp_buf)) {
 			WCN_DBG(FM_NTC | MAIN, "get config form %s ok\n", tmp_buf);
