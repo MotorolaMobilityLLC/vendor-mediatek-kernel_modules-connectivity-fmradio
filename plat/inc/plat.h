@@ -63,7 +63,34 @@ enum {
 	FM_SYS_SPI_ERR
 };
 
+enum {
+	FM_CONNAC_LEGACY = 0,
+	FM_CONNAC_1_0,
+	FM_CONNAC_1_2,
+	FM_CONNAC_1_5,
+	FM_CONNAC_2_0,
+	FM_CONNAC_2_1,
+	FM_CONNAC_UNKNOWN
+};
+
 extern signed int fm_rds_parser(
 	struct rds_rx_t *rds_raw, signed int rds_size);
+
+extern signed int mt6631_fm_low_ops_register(
+	struct fm_callback *cb, struct fm_basic_interface *bi);
+extern signed int mt6631_fm_low_ops_unregister(
+	struct fm_basic_interface *bi);
+extern signed int mt6631_fm_rds_ops_register(
+	struct fm_basic_interface *bi, struct fm_rds_interface *ri);
+extern signed int mt6631_fm_rds_ops_unregister(
+	struct fm_rds_interface *ri);
+extern signed int mt6635_fm_low_ops_register(
+	struct fm_callback *cb, struct fm_basic_interface *bi);
+extern signed int mt6635_fm_low_ops_unregister(
+	struct fm_basic_interface *bi);
+extern signed int mt6635_fm_rds_ops_register(
+	struct fm_basic_interface *bi, struct fm_rds_interface *ri);
+extern signed int mt6635_fm_rds_ops_unregister(
+	struct fm_rds_interface *ri);
 
 #endif /* FM_PLAT_H */

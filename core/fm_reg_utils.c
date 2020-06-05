@@ -21,6 +21,9 @@
 #include "plat.h"
 
 struct fm_wcn_reg_ops fm_wcn_ops;
+unsigned char *cmd_buf;
+struct fm_lock *cmd_buf_lock;
+struct fm_res_ctx *fm_res;
 
 int fm_ioremap_read(phys_addr_t addr, unsigned int *val)
 {
