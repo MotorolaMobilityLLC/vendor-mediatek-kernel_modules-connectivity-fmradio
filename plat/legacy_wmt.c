@@ -203,6 +203,9 @@ static int fm_drv_spi_clock_switch(enum fm_spi_speed speed)
 
 static int drv_get_hw_version(void)
 {
+#if defined(MT6625_FM) || defined(MT6627_FM) || defined(MT6630_FM) || defined(MT6632_FM) || defined(soc)
+	return FM_CONNAC_LEGACY;
+#else
 	int id = fm_wmt_chipid_query();
 	int ret = FM_CONNAC_UNKNOWN;
 
@@ -235,6 +238,7 @@ static int drv_get_hw_version(void)
 	}
 
 	return ret;
+#endif
 }
 
 static unsigned char drv_get_top_index(void)
@@ -246,7 +250,9 @@ static unsigned char drv_get_top_index(void)
 
 static unsigned int drv_get_get_adie(void)
 {
-#if defined(MT6631_FM)
+#if defined(MT6625_FM) || defined(MT6627_FM) || defined(MT6630_FM) || defined(MT6632_FM) || defined(soc)
+	return 0;
+#elif defined(MT6631_FM)
 	return 0x6631;
 #elif defined(MT6635_FM)
 	return 0x6635;
