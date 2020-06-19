@@ -711,10 +711,8 @@ static signed int mt6635_pwrup_DSP_download(struct fm_patch_tbl *patch_tbl)
 	fm_reg_write(0x90, 0x0040); /* Reset download control  */
 	fm_reg_write(0x90, 0x0000); /* Disable memory control from host*/
 out:
-	if (dsp_buf) {
+	if (dsp_buf)
 		fm_vfree(dsp_buf);
-		dsp_buf = NULL;
-	}
 	return ret;
 }
 static void mt6635_show_reg(void)
@@ -932,7 +930,7 @@ static signed int mt6635_PowerDown(void)
 	/* SLP_CTRL setting */
 
 	/* set common spi fm parameter */
-	ret = fm_host_reg_read(0x1800400C, &tem);
+	fm_host_reg_read(0x1800400C, &tem);
 	tem = tem & 0xFFFF0000; /* D15:D0 */
 	ret = fm_host_reg_write(0x1800400C, tem);
 	if (ret)
@@ -940,9 +938,9 @@ static signed int mt6635_PowerDown(void)
 
 	/* clear 26M crystal sleep */
 	WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x18008040[0] = 0x0\n");
-	ret = fm_host_reg_read(0x18008040, &tem);
+	fm_host_reg_read(0x18008040, &tem);
 	tem = tem & 0xFFFFFFFE;
-	ret = fm_host_reg_write(0x18008040, tem);
+	fm_host_reg_write(0x18008040, tem);
 
 	return ret;
 }

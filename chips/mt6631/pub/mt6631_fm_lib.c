@@ -137,7 +137,7 @@ static bool mt6631_do_SPI_hopping_26M(void)
 
 	if (hwid <= FM_CONNAC_1_2) {
 		/* Rlease TOP2/64M sleep */
-		ret = fm_host_reg_read(0x81021138, &tem);   /* Set 0x81021138[7] = 0x0 */
+		fm_host_reg_read(0x81021138, &tem);   /* Set 0x81021138[7] = 0x0 */
 		tem = tem & 0xFFFFFF7F;
 		ret = fm_host_reg_write(0x81021138, tem);
 		if (ret) {
@@ -224,9 +224,9 @@ static bool mt6631_do_SPI_hopping_64M(unsigned short freq)
 	for (i = 0; i < 100; i++) { /*rd 0x8002110C until D27 ==1*/
 
 		if (hwid >= FM_CONNAC_1_2)
-			ret = fm_host_reg_read(0x80021118, &tem);
+			fm_host_reg_read(0x80021118, &tem);
 		else
-			ret = fm_host_reg_read(0x8002110C, &tem);
+			fm_host_reg_read(0x8002110C, &tem);
 
 		if (tem & 0x08000000) {
 			WCN_DBG(FM_NTC | CHIP, "%s: POLLING PLL_RDY success !\n", __func__);
@@ -885,10 +885,8 @@ static signed int mt6631_pwrup_DSP_download(struct fm_patch_tbl *patch_tbl)
 	fm_reg_write(0x90, 0x0040); /* Reset download control  */
 	fm_reg_write(0x90, 0x0000); /* Disable memory control from host*/
 out:
-	if (dsp_buf) {
+	if (dsp_buf)
 		fm_vfree(dsp_buf);
-		dsp_buf = NULL;
-	}
 	return ret;
 }
 static void mt6631_show_reg(void)
@@ -1094,14 +1092,14 @@ static signed int mt6631_PowerDown(void)
 	/* Enable 26M crystal sleep */
 	if (hwid >= FM_CONNAC_1_0 && hwid <= FM_CONNAC_1_2) {
 		WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0\n");
-		ret = fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
+		fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
 		tem = tem & 0xFF7FFFFF;
-		ret = fm_host_reg_write(0x81021200, tem);
+		fm_host_reg_write(0x81021200, tem);
 	} else {
 		WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021234[7] = 0x0\n");
-		ret = fm_host_reg_read(0x81021234, &tem);   /* Set 0x81021234[7] = 0x0 */
+		fm_host_reg_read(0x81021234, &tem);   /* Set 0x81021234[7] = 0x0 */
 		tem = tem & 0xFFFFFF7F;
-		ret = fm_host_reg_write(0x81021234, tem);
+		fm_host_reg_write(0x81021234, tem);
 	}
 
 	if (ret)
