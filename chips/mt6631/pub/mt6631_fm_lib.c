@@ -86,7 +86,7 @@ static bool mt6631_do_SPI_hopping_26M(void)
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
 	signed int hwid = ei->get_hw_version();
 	signed int ret = 0;
-	unsigned int tem = 0;
+	unsigned int tem = 0, hw_ver_id = 0;
 
 	/* switch SPI clock to 26MHz */
 	if (ei->spi_clock_switch)
@@ -98,13 +98,14 @@ static bool mt6631_do_SPI_hopping_26M(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "Switch SPI clock to 26MHz failed\n");
 
-	ret = fm_ioremap_read(0x180B1010, &tem);
+	ret = fm_ioremap_read(0x180B1010, &hw_ver_id);
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: read HW ver. failed\n", __func__);
+	hw_ver_id = hw_ver_id >> 16;
 
 	/* unlock 64M */
 	if (hwid >= FM_CONNAC_1_2) {
-		if (hwid == FM_CONNAC_1_2 || tem == 0x1050 || (tem & 0xFFF0) == 0x1020) {
+		if (hw_ver_id == 0x1005 || hw_ver_id == 0x1002) {
 			ret = fm_host_reg_read(0x80023008, &tem);
 			if (ret)
 				WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M reg 0x880023008 failed\n", __func__);
@@ -155,7 +156,7 @@ static bool mt6631_do_SPI_hopping_64M(unsigned short freq)
 	signed int hwid = ei->get_hw_version();
 	signed int ret = 0;
 	signed int i = 0;
-	unsigned int tem = 0;
+	unsigned int tem = 0, hw_ver_id = 0;
 	bool flag_spi_hopping = false;
 
 	if (!mt6631_SPI_hopping_check(freq))
@@ -166,10 +167,11 @@ static bool mt6631_do_SPI_hopping_64M(unsigned short freq)
 		"%s: freq:%d is SPI hopping channel,turn on 64M PLL\n",
 		__func__, freq);
 
-	ret = fm_ioremap_read(0x180B1010, &tem);
+	ret = fm_ioremap_read(0x180B1010, &hw_ver_id);
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: read HW ver. failed\n", __func__);
-	WCN_DBG(FM_NTC | CHIP, "%s: HW ver. ID = 0x%08x\n", __func__, tem);
+	WCN_DBG(FM_NTC | CHIP, "%s: HW ver. ID = 0x%08x\n", __func__, hw_ver_id);
+	hw_ver_id = hw_ver_id >> 16;
 
 	if (hwid <= FM_CONNAC_1_2) {
 		/*Disable TOP2/64M sleep*/
@@ -183,7 +185,7 @@ static bool mt6631_do_SPI_hopping_64M(unsigned short freq)
 	}
 	/* lock 64M */
 	if (hwid >= FM_CONNAC_1_2) {
-		if (hwid == FM_CONNAC_1_2 || tem == 0x1050 || (tem & 0xFFF0) == 0x1020) {
+		if (hw_ver_id == 0x1005 || hw_ver_id == 0x1002) {
 			ret = fm_host_reg_read(0x80023008, &tem);
 			if (ret)
 				WCN_DBG(FM_ERR | CHIP,
