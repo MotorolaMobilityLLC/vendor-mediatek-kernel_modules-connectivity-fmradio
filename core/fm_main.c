@@ -101,11 +101,11 @@ static void fm_timer_func(unsigned long data);
 #endif
 static void fm_enable_rds_BlerCheck(struct fm *fm);
 static void fm_disable_rds_BlerCheck(void);
-static void fm_rds_reset_work_func(unsigned long data);
+static void fm_rds_reset_work_func(struct work_struct *work);
 /* when interrupt be triggered by FM chip, fm_eint_handler will first be executed */
 /* then fm_eint_handler will schedule fm_eint_work_func to run */
 static void fm_eint_handler(void);
-static void fm_eint_work_func(unsigned long data);
+static void fm_eint_work_func(struct work_struct *work);
 static signed int pwrdown_flow(struct fm *fm);
 
 static unsigned short fm_cur_freq_get(void)
@@ -1917,7 +1917,7 @@ out:
 }
 #endif
 
-static void fm_tx_power_ctrl_worker_func(unsigned long data)
+static void fm_tx_power_ctrl_worker_func(struct work_struct *work)
 {
 	signed int ctrl = 0, ret = 0;
 	struct fm *fm = g_fm_struct;
@@ -1945,7 +1945,7 @@ out:
 	WCN_DBG(FM_NTC | MAIN, "-%s()\n", __func__);
 }
 
-static void fm_tx_rtc_ctrl_worker_func(unsigned long data)
+static void fm_tx_rtc_ctrl_worker_func(struct work_struct *work)
 {
 	signed int ret = 0;
 	signed int ctrl = 0;
@@ -2005,7 +2005,7 @@ out:
 	WCN_DBG(FM_NTC | MAIN, "-%s()\n", __func__);
 }
 
-static void fm_tx_desense_wifi_worker_func(unsigned long data)
+static void fm_tx_desense_wifi_worker_func(struct work_struct *work)
 {
 	signed int ret = 0;
 	signed int ctrl = 0;
@@ -2111,7 +2111,7 @@ static void fm_disable_rds_BlerCheck(void)
 	WCN_DBG(FM_INF | MAIN, "stop rds timer ok\n");
 }
 
-void fm_rds_reset_work_func(unsigned long data)
+void fm_rds_reset_work_func(struct work_struct *work)
 {
 	signed int ret = 0;
 
@@ -2142,7 +2142,7 @@ void fm_rds_reset_work_func(unsigned long data)
 }
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
-void fm_cqi_check_work_func(unsigned long data)
+void fm_cqi_check_work_func(struct work_struct *work)
 {
 	struct fm *fm = g_fm_struct;
 
@@ -2172,7 +2172,7 @@ void fm_cqi_check_work_func(unsigned long data)
 }
 #endif
 
-void fm_subsys_reset_work_func(unsigned long data)
+void fm_subsys_reset_work_func(struct work_struct *work)
 {
 	g_dbg_level = 0xffffffff;
 	if (FM_LOCK(fm_ops_lock))
@@ -2251,7 +2251,7 @@ out:
 	g_dbg_level = 0xfffffff5;
 }
 
-void fm_pwroff_work_func(unsigned long data)
+void fm_pwroff_work_func(struct work_struct *work)
 {
 	fm_powerdown(g_fm_struct, 0);
 }
@@ -2285,7 +2285,7 @@ signed int fm_rds_parser(struct rds_rx_t *rds_raw, signed int rds_size)
 	return 0;
 }
 
-static void fm_eint_work_func(unsigned long data)
+static void fm_eint_work_func(struct work_struct *work)
 {
 	if (fm_wcn_ops.ei.eint_handler)
 		fm_wcn_ops.ei.eint_handler();

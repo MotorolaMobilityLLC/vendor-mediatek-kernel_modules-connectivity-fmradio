@@ -520,7 +520,7 @@ signed int fm_timer_put(struct fm_timer *thiz)
 /*
  * FM work thread mechanism
  */
-static signed int fm_work_init(struct fm_work *thiz, void (*work_func) (unsigned long data), unsigned long data)
+static signed int fm_work_init(struct fm_work *thiz, work_func_t work_func, unsigned long data)
 {
 	struct work_struct *sys_work = (struct work_struct *)thiz->priv;
 	work_func_t func;
