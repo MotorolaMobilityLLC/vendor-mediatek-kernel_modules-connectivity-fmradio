@@ -975,8 +975,8 @@ static signed int mt6635_set_freq_fine_tune_reg_op(unsigned char *buf, signed in
 	pkt_size += fm_bop_write(0x01, 0xAEE8, &buf[pkt_size], buf_size - pkt_size);
 	pkt_size += fm_bop_write(0x30, 0x0000, &buf[pkt_size], buf_size - pkt_size);
 	pkt_size += fm_bop_write(0x36, 0x017A, &buf[pkt_size], buf_size - pkt_size);
-	/* set threshold =5 */
-	pkt_size += fm_bop_modify(0x3F, 0x0FFF, 0x5000, &buf[pkt_size], buf_size - pkt_size);
+	/* set threshold = 4 */
+	pkt_size += fm_bop_modify(0x3F, 0x0FFF, 0x4000, &buf[pkt_size], buf_size - pkt_size);
 	/* enable DCOC IDAC auto-disable */
 	pkt_size += fm_bop_modify(0x33, 0xFDFF, 0x0200, &buf[pkt_size], buf_size - pkt_size);
 
