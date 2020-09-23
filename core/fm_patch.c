@@ -71,7 +71,6 @@ int file_read_thread(void *arg)
 signed int fm_file_read(const signed char *filename, unsigned char *dst, signed int len, signed int position)
 {
 	struct fm_file_read_data *data = &g_file_read_data;
-	int ret = 0;
 
 	init_completion(&data->comp);
 
@@ -83,9 +82,7 @@ signed int fm_file_read(const signed char *filename, unsigned char *dst, signed 
 
 	kthread_run(file_read_thread, (void *)data, "file_read_thread");
 
-	ret = wait_for_completion_timeout(&data->comp, msecs_to_jiffies(3000));
-	if (ret == 0)
-		WCN_DBG(FM_ERR | CHIP, "timeout on wait_for_completion_timeout\n");
+	wait_for_completion(&data->comp);
 
 	return data->ret;
 }
