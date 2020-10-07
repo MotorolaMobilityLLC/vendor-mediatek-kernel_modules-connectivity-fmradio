@@ -138,7 +138,7 @@ static unsigned short mt6580_get_chipid(void)
  */
 static signed int mt6580_SetAntennaType(signed int type)
 {
-	unsigned short dataRead;
+	unsigned short dataRead = 0;
 
 	WCN_DBG(FM_DBG | CHIP, "set ana to %s\n", type ? "short" : "long");
 	fm_reg_read(FM_MAIN_CG2_CTRL, &dataRead);
