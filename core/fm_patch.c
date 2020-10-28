@@ -38,6 +38,8 @@ int file_read_thread(void *arg)
 			data->filename);
 		release_firmware(fw);
 		data->ret = -FM_EPATCH;
+
+		complete(&data->comp);
 		return 0;
 	}
 	WCN_DBG(FM_NTC | CHIP, "load firmware \"%s\" ok\n", data->filename);
