@@ -25,50 +25,6 @@ unsigned char *cmd_buf;
 struct fm_lock *cmd_buf_lock;
 struct fm_res_ctx *fm_res;
 
-int fm_ioremap_read(phys_addr_t addr, unsigned int *val)
-{
-	unsigned int size = 0x10;
-	void *vir_addr = NULL;
-
-	request_mem_region(addr, size, "FM_TEMP_READ");
-	vir_addr = ioremap_nocache(addr, size);
-	if (!vir_addr) {
-		WCN_DBG(FM_ERR | CHIP, "Cannot remap address.\n");
-		return -1;
-	}
-
-	*val = readl(vir_addr);
-	iounmap(vir_addr);
-	release_mem_region(addr, size);
-
-	WCN_DBG(FM_NTC | CHIP, "Read 0x%08lx=0x%08x",
-		(unsigned long)addr, *val);
-
-	return 0;
-}
-
-int fm_ioremap_write(phys_addr_t addr, unsigned int val)
-{
-	unsigned int size = 0x10;
-	void *vir_addr = NULL;
-
-	request_mem_region(addr, size, "FM_TEMP_WRITE");
-	vir_addr = ioremap_nocache(addr, size);
-	if (!vir_addr) {
-		WCN_DBG(FM_ERR | CHIP, "Cannot remap address.\n");
-		return -1;
-	}
-
-	writel(val, vir_addr);
-	iounmap(vir_addr);
-	release_mem_region(addr, size);
-
-	WCN_DBG(FM_NTC | CHIP, "Write 0x%08lx=0x%08x",
-		(unsigned long)addr, val);
-
-	return 0;
-}
-
 void fw_spi_read(unsigned char addr, unsigned short *data)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
