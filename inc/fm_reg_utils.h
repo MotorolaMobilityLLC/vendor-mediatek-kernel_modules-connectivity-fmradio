@@ -374,8 +374,6 @@ struct fm_full_cqi {
 };
 
 /* FM interface */
-int fm_ioremap_read(phys_addr_t addr, unsigned int *val);
-int fm_ioremap_write(phys_addr_t addr, unsigned int val);
 void fw_spi_read(unsigned char addr, unsigned short *data);
 void fw_spi_write(unsigned char addr, unsigned short data);
 void fw_bop_udelay(unsigned int usec);
