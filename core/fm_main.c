@@ -21,7 +21,6 @@
 #include "fm_reg_utils.h"
 /* #include "fm_cust_cfg.h" */
 #include "fm_cmd.h"
-#include "fm_reg_utils.h"
 
 /* fm main data structure */
 static struct fm *g_fm_struct;
@@ -44,6 +43,9 @@ static struct fm_timer *fm_timer_sys;
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
 static struct fm_timer *fm_cqi_check_timer;
 #endif
+
+#define FM_CHIP_CAN_SUSPEND 0x00006631
+FM_WAKE_LOCK_T *fm_wake_lock;
 
 static bool scan_stop_flag; /* false */
 static struct fm_gps_rtc_info gps_rtc_info;
@@ -478,6 +480,10 @@ signed int fm_powerup(struct fm *fm, struct fm_tune_parm *parm)
 		WCN_DBG(FM_NTC | MAIN, "start timer fail!!!\n");
 	}
 
+	if (fm_wake_lock) {
+		fm_wakelock_get(fm_wake_lock);
+		WCN_DBG(FM_NTC | MAIN, "acquire fm_wake_lock\n");
+	}
 out:
 	FM_UNLOCK(fm_ops_lock);
 	return ret;
@@ -578,6 +584,11 @@ out:
 signed int fm_powerdown(struct fm *fm, int type)
 {
 	signed int ret = 0;
+
+	if (fm_wake_lock) {
+		fm_wakelock_put(fm_wake_lock);
+		WCN_DBG(FM_NTC | MAIN, "release fm_wake_lock\n");
+	}
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
 	fm_cqi_check_timer->stop(fm_cqi_check_timer);
@@ -2713,6 +2724,7 @@ signed int fm_dev_destroy(struct fm *fm)
 signed int fm_env_setup(void)
 {
 	signed int ret = 0;
+	struct fm_hw_info hwinfo;
 
 	WCN_DBG(FM_NTC | MAIN, "%s\n", __func__);
 
@@ -2789,6 +2801,20 @@ signed int fm_env_setup(void)
 		return -1;
 	}
 
+	/* this wake_lock is used by legacy project */
+	if (fm_low_ops.bi.hwinfo_get) {
+		ret = fm_low_ops.bi.hwinfo_get(&hwinfo);
+		if (hwinfo.chip_id < FM_CHIP_CAN_SUSPEND) {
+			fm_wake_lock = fm_wakelock_create("fm_wakelock");
+			if (!fm_wake_lock) {
+				WCN_DBG(FM_ERR | MAIN, "fm_wakelock_init Failed\n");
+				return -1;
+			}
+		} else {
+			fm_wake_lock = NULL;
+		}
+	}
+
 	return ret;
 }
 
@@ -2846,6 +2872,9 @@ signed int fm_env_destroy(void)
 	ret = fm_lock_put(fm_wcn_ops.own_lock);
 	if (!ret)
 		fm_wcn_ops.own_lock = NULL;
+
+	if (fm_wake_lock)
+		fm_wakelock_destroy(fm_wake_lock);
 
 	return ret;
 }

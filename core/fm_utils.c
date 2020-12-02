@@ -653,6 +653,57 @@ signed int fm_workthread_put(struct fm_workthread *thiz)
 	}
 }
 
+FM_WAKE_LOCK_T *fm_wakelock_create(const signed char *name)
+{
+	FM_WAKE_LOCK_T *lock;
+#if (KERNEL_VERSION(4, 14, 149) <= LINUX_VERSION_CODE)
+	lock = wakeup_source_register(NULL, name);
+#elif (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
+	lock = fm_zalloc(sizeof(FM_WAKE_LOCK_T));
+	if (lock)
+		wakeup_source_init(lock, name);
+#else
+	lock = fm_zalloc(sizeof(FM_WAKE_LOCK_T));
+	if (lock)
+		wake_lock_init(lock, WAKE_LOCK_SUSPEND, name);
+#endif
+	return lock;
+}
+
+void fm_wakelock_destroy(FM_WAKE_LOCK_T *lock)
+{
+#if (KERNEL_VERSION(4, 14, 149) <= LINUX_VERSION_CODE)
+	wakeup_source_unregister(lock);
+#elif (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
+	wakeup_source_trash(lock);
+	fm_free(lock);
+#else
+	wake_lock_destroy(lock);
+	fm_free(lock);
+#endif
+	lock = NULL;
+}
+
+void fm_wakelock_get(FM_WAKE_LOCK_T *lock)
+{
+	if (lock)
+#if (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
+		__pm_stay_awake(lock);
+#else
+		wake_lock(lock);
+#endif
+}
+
+void fm_wakelock_put(FM_WAKE_LOCK_T *lock)
+{
+	if (lock)
+#if (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
+		__pm_relax(lock);
+#else
+		wake_unlock(lock);
+#endif
+}
+
 signed int fm_fifo_in(struct fm_fifo *thiz, void *item)
 {
 	if (item == NULL) {
