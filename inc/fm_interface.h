@@ -120,6 +120,7 @@ struct fm_platform {
 
 struct fm {
 	/* chip info */
+	signed int projectid;
 	unsigned short chip_id;		/* chip id, such as 6616/6620/6626/6628 */
 	unsigned short device_id;	/* chip version */
 	/* basic run time info */
@@ -166,6 +167,7 @@ struct fm_callback {
 	/* call backs */
 	unsigned short (*cur_freq_get)(void);
 	signed int (*cur_freq_set)(unsigned short new_freq);
+	signed int (*projectid_get)(void);
 /* unsigned short(*chan_para_get)(unsigned short freq);    //get channel parameter, HL side/ FA / ATJ */
 };
 

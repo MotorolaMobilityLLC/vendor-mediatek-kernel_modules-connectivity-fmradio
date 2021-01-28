@@ -782,6 +782,7 @@ static signed int mt6631_PowerUp(unsigned short *chip_id, unsigned short *device
 	unsigned short tmp_reg = 0;
 	unsigned int tem = 0;
 	unsigned int host_reg = 0;
+	signed int projectid = fm_cb_op->projectid_get();
 
 	if (chip_id == NULL) {
 		WCN_DBG(FM_ERR | CHIP, "%s,invalid pointer\n", __func__);
@@ -908,6 +909,7 @@ static signed int mt6631_PowerDown(void)
 	signed int ret = 0;
 	unsigned int tem = 0;
 	unsigned short pkt_size;
+	signed int projectid = fm_cb_op->projectid_get();
 	/* unsigned int host_reg = 0; */
 
 	WCN_DBG(FM_DBG | CHIP, "pwr down seq\n");
