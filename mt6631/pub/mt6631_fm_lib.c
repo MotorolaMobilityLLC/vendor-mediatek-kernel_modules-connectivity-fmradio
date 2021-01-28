@@ -800,15 +800,28 @@ static signed int mt6631_PowerUp(unsigned short *chip_id, unsigned short *device
 		WCN_DBG(FM_ALT | CHIP, " pwrup set CSPI failed\n");
 		return ret;
 	}
-	/* Set top_clk_en_adie to trigger sleep controller before FM power on */
-	fm_host_reg_read(0x81024030, &tem);   /* Set 0x81024030[1] = 0x1 */
-	tem = tem | 0x00000002;
-	fm_host_reg_write(0x81024030, tem);
 
-	/* Disable 26M crystal sleep */
-	fm_host_reg_read(0x81021234, &tem);   /* Set 0x81021234[7] = 0x1 */
-	tem = tem | 0x00000080;
-	fm_host_reg_write(0x81021234, tem);
+	if (projectid == 0x6765 || projectid == 0x6761) {
+		/* Set top_clk_en_adie to trigger sleep controller before FM power on */
+		fm_host_reg_read(0x81021500, &tem);   /* Set 0x81021500[1] = 0x1 */
+		tem = tem | 0x00000002;
+		fm_host_reg_write(0x81021500, tem);
+
+		/* Disable 26M crystal sleep */
+		fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x1 */
+		tem = tem | 0x00800000;
+		fm_host_reg_write(0x81021200, tem);
+	} else {
+		/* Set top_clk_en_adie to trigger sleep controller before FM power on */
+		fm_host_reg_read(0x81024030, &tem);   /* Set 0x81024030[1] = 0x1 */
+		tem = tem | 0x00000002;
+		fm_host_reg_write(0x81024030, tem);
+
+		/* Disable 26M crystal sleep */
+		fm_host_reg_read(0x81021234, &tem);   /* Set 0x81021234[7] = 0x1 */
+		tem = tem | 0x00000080;
+		fm_host_reg_write(0x81021234, tem);
+	}
 
 	/* turn on RG_TOP_BGLDO */
 	ret = fm_top_reg_read(0x00c0, &host_reg);
@@ -944,10 +957,18 @@ static signed int mt6631_PowerDown(void)
 		WCN_DBG(FM_ALT | CHIP, "PowerDown: Release TOP2/64M sleep failed\n");
 
 	/* Enable 26M crystal sleep */
-	WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021234[7] = 0x0\n");
-	ret = fm_host_reg_read(0x81021234, &tem);   /* Set 0x81021234[7] = 0x0 */
-	tem = tem & 0xFFFFFF7F;
-	ret = fm_host_reg_write(0x81021234, tem);
+	if (projectid == 0x6765 || projectid == 0x6761) {
+		WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0\n");
+		ret = fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
+		tem = tem & 0xFF7FFFFF;
+		ret = fm_host_reg_write(0x81021200, tem);
+	} else {
+		WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021234[7] = 0x0\n");
+		ret = fm_host_reg_read(0x81021234, &tem);   /* Set 0x81021234[7] = 0x0 */
+		tem = tem & 0xFFFFFF7F;
+		ret = fm_host_reg_write(0x81021234, tem);
+	}
+
 	if (ret)
 		WCN_DBG(FM_ALT | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021234[7] = 0x0 failed\n");
 
