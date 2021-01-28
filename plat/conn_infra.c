@@ -1208,27 +1208,39 @@ static int fm_conninfra_chipid_query(void)
 #endif
 }
 
-static int fm_conninfra_spi_clock_switch(void)
+static int fm_conninfra_spi_clock_switch(enum fm_spi_speed speed)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	enum connsys_spi_speed_type sp_type = CONNSYS_SPI_SPEED_26M;
 	int ret = 0;
 
 	if (si->set_own && !si->set_own()) {
 		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
-		return 0;
+		return -2;
 	}
 
-	ret = conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_64M);
+	switch (speed) {
+	case FM_SPI_SPEED_26M:
+		sp_type = CONNSYS_SPI_SPEED_26M;
+		break;
+	case FM_SPI_SPEED_64M:
+		sp_type = CONNSYS_SPI_SPEED_64M;
+		break;
+	default:
+		break;
+	}
+
+	ret = conninfra_spi_clock_switch(sp_type);
 
 	if (si->clr_own)
 		si->clr_own();
 
 	if (ret == -1) {
 		WCN_DBG(FM_ERR | CHIP, "conninfra clock switch fail.\n");
-		return 0;
+		return -1;
 	}
 
-	return 1;
+	return 0;
 }
 
 #else /* CFG_FM_CONNAC2 */
@@ -1264,6 +1276,29 @@ static int fm_wmt_ic_info_get(void)
 static int fm_wmt_chipid_query(void)
 {
 	return mtk_wcn_wmt_chipid_query();
+}
+
+static int fm_wmt_spi_clock_switch(enum fm_spi_speed speed)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	unsigned int reg_val = 0;
+
+	switch (speed) {
+	case FM_SPI_SPEED_26M:
+		si->host_read(si, 0x18004004, &reg_val);
+		reg_val &= 0xFFFFFFFE;
+		si->host_write(si, 0x18004004, reg_val);
+		break;
+	case FM_SPI_SPEED_64M:
+		si->host_read(si, 0x18004004, &reg_val);
+		reg_val |= 0x00000001;
+		si->host_write(si, 0x18004004, reg_val);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
 }
 #endif /* CFG_FM_CONNAC2 */
 
@@ -1338,7 +1373,7 @@ static void register_drv_ops_init(void)
 	ei->wmt_func_off = fm_wmt_func_off;
 	ei->wmt_ic_info_get = fm_wmt_ic_info_get;
 	ei->wmt_chipid_query = fm_wmt_chipid_query;
-	ei->spi_clock_switch = NULL;
+	ei->spi_clock_switch = fm_wmt_spi_clock_switch;
 #endif
 }
 
