@@ -98,7 +98,7 @@ static bool mt6631_do_SPI_hopping_26M(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "Switch SPI clock to 26MHz failed\n");
 
-	ret = fm_ioremap_read(0x180B1010, &hw_ver_id);
+	ret = fm_host_reg_read(0x80021010, &hw_ver_id);
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: read HW ver. failed\n", __func__);
 	hw_ver_id = hw_ver_id >> 16;
@@ -167,7 +167,7 @@ static bool mt6631_do_SPI_hopping_64M(unsigned short freq)
 		"%s: freq:%d is SPI hopping channel,turn on 64M PLL\n",
 		__func__, freq);
 
-	ret = fm_ioremap_read(0x180B1010, &hw_ver_id);
+	ret = fm_host_reg_read(0x80021010, &hw_ver_id);
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: read HW ver. failed\n", __func__);
 	WCN_DBG(FM_NTC | CHIP, "%s: HW ver. ID = 0x%08x\n", __func__, hw_ver_id);
