@@ -39,7 +39,10 @@ static struct fm_lock *fm_rxtx_lock;	/* protect FM RX TX mode switch */
 static struct fm_lock *fm_rtc_mutex;	/* protect FM GPS RTC drift info */
 
 static struct fm_timer *fm_timer_sys;
+
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 static struct fm_timer *fm_cqi_check_timer;
+#endif
 
 static bool scan_stop_flag; /* false */
 static struct fm_gps_rtc_info gps_rtc_info;
@@ -575,7 +578,9 @@ signed int fm_powerdown(struct fm *fm, int type)
 {
 	signed int ret = 0;
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 	fm_cqi_check_timer->stop(fm_cqi_check_timer);
+#endif
 
 	if (type == 1) {	/* 0: RX 1: TX */
 		ret = fm_powerdowntx(fm);
@@ -1574,7 +1579,9 @@ signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 	signed int len;
 	struct rds_raw_t rds_log;
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 	fm_cqi_check_timer->stop(fm_cqi_check_timer);
+#endif
 
 	if (fm_low_ops.bi.mute == NULL) {
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
@@ -1629,6 +1636,7 @@ signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 		ret = -FM_EFW;
 	}
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 	if (fm_low_ops.bi.is_valid_freq) {
 		if (fm_low_ops.bi.is_valid_freq(parm->freq)) {
 			if (fm->vol != 15) {
@@ -1647,6 +1655,7 @@ signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 			fm_cqi_check_timer->start(fm_cqi_check_timer);
 		}
 	}
+#endif
 	/* fm_low_ops.bi.mute(false);//open for dbg */
 	fm_op_state_set(fm, FM_STA_PLAY);
 out:
@@ -1726,7 +1735,9 @@ signed int fm_soft_mute_tune(struct fm *fm, struct fm_softmute_tune_t *parm)
 {
 	signed int ret = 0;
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 	fm_cqi_check_timer->stop(fm_cqi_check_timer);
+#endif
 
 	if (fm_low_ops.bi.softmute_tune == NULL) {
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
@@ -1872,6 +1883,7 @@ out:
 	FM_UNLOCK(fm_timer_lock);
 }
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 static void fm_cqi_check_timer_func(unsigned long data)
 {
 	struct fm *fm = g_fm_struct;
@@ -1892,6 +1904,7 @@ static void fm_cqi_check_timer_func(unsigned long data)
 out:
 	FM_UNLOCK(fm_timer_lock);
 }
+#endif
 
 static void fm_tx_power_ctrl_worker_func(unsigned long data)
 {
@@ -2117,6 +2130,7 @@ void fm_rds_reset_work_func(unsigned long data)
 	FM_UNLOCK(fm_rxtx_lock);
 }
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 void fm_cqi_check_work_func(unsigned long data)
 {
 	struct fm *fm = g_fm_struct;
@@ -2145,6 +2159,7 @@ void fm_cqi_check_work_func(unsigned long data)
 
 	FM_UNLOCK(fm_ops_lock);
 }
+#endif
 
 void fm_subsys_reset_work_func(unsigned long data)
 {
@@ -2207,7 +2222,10 @@ void fm_subsys_reset_work_func(unsigned long data)
 		WCN_DBG(FM_NTC | MAIN, "initial timer fail!!!\n");
 	}
 
-	fm_cqi_check_timer->init(fm_cqi_check_timer, fm_cqi_check_timer_func, (unsigned long)g_fm_struct, 1000, 0);
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
+	fm_cqi_check_timer->init(fm_cqi_check_timer, fm_cqi_check_timer_func,
+				 (unsigned long)g_fm_struct, 1000, 0);
+#endif
 	g_fm_struct->rds_on = 1;
 	fm_low_ops.ri.rds_onoff(g_fm_struct->pstRDSData, g_fm_struct->rds_on);
 
@@ -2461,6 +2479,7 @@ struct fm *fm_dev_init(unsigned int arg)
 		fm->rds_wk->init(fm->rds_wk, fm_rds_reset_work_func, (unsigned long)fm);
 	}
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 	fm->ch_valid_check_wk = fm_work_create("fm_ch_valid_check_work");
 	if (!fm->ch_valid_check_wk) {
 		WCN_DBG(FM_ALT | MAIN, "-ENOMEM for ch_valid_check_wk\n");
@@ -2471,6 +2490,7 @@ struct fm *fm_dev_init(unsigned int arg)
 		fm->ch_valid_check_wk->init(fm->ch_valid_check_wk,
 			fm_cqi_check_work_func, (unsigned long)fm);
 	}
+#endif
 
 	fm->fm_tx_power_ctrl_work = fm_work_create("tx_pwr_ctl_work");
 	if (!fm->fm_tx_power_ctrl_work) {
@@ -2590,7 +2610,9 @@ signed int fm_dev_destroy(struct fm *fm)
 	WCN_DBG(FM_DBG | MAIN, "%s\n", __func__);
 
 	fm_timer_sys->stop(fm_timer_sys);
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 	fm_timer_sys->stop(fm_cqi_check_timer);
+#endif
 	if (!fm) {
 		WCN_DBG(FM_NTC | MAIN, "fm is null\n");
 		return -1;
@@ -2712,11 +2734,13 @@ signed int fm_env_setup(void)
 
 	fm_timer_get(fm_timer_sys);
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 	fm_cqi_check_timer = fm_timer_create("fm_cqi_check_timer");
 	if (!fm_cqi_check_timer)
 		return -1;
 	fm_timer_get(fm_cqi_check_timer);
 	fm_cqi_check_timer->init(fm_cqi_check_timer, fm_cqi_check_timer_func, (unsigned long)g_fm_struct, 500, 0);
+#endif
 
 	WCN_DBG(FM_NTC | MAIN, "fm timer created\n");
 
@@ -2772,9 +2796,11 @@ signed int fm_env_destroy(void)
 	if (!ret)
 		fm_timer_sys = NULL;
 
+#if (FM_INVALID_CHAN_NOISE_REDUCING)
 	ret = fm_timer_put(fm_cqi_check_timer);
 	if (!ret)
 		fm_cqi_check_timer = NULL;
+#endif
 
 	return ret;
 }
