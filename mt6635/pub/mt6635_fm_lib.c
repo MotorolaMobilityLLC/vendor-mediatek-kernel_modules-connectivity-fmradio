@@ -226,16 +226,6 @@ static signed int mt6635_RampDown(void)
 	if (ret)
 		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
 
-	/* Rlease TOP2/64M sleep */
-	ret = fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
-	tem = tem & 0xFF7FFFFF;
-	ret = fm_host_reg_write(0x81021200, tem);
-	if (ret) {
-		WCN_DBG(FM_ALT | CHIP, "RampDown Rlease TOP2/64M sleep failed\n");
-		return ret;
-	}
-	WCN_DBG(FM_DBG | CHIP, "RampDown Rlease TOP2/64M sleep\n");
-
 	/* A0.0 Host control RF register */
 	ret = fm_set_bits(0x60, 0x0007, 0xFFF0);  /*Set 0x60 [D3:D0] = 0x7*/
 	if (ret) {
@@ -1032,16 +1022,6 @@ static bool mt6635_SetFreq(unsigned short freq)
 		WCN_DBG(FM_ERR | CHIP, "set freq wr 0x65 failed\n");
 		return false;
 	}
-
-	WCN_DBG(FM_NTC | CHIP, "%s: Turn on 64M PLL\n", __func__);
-	/*Disable TOP2/64M sleep*/
-	ret = fm_host_reg_read(0x81021200, &reg_val);
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: read 64M reg 0x81021200 failed\n", __func__);
-	reg_val |= 0x00800000;
-	ret = fm_host_reg_write(0x81021200, reg_val);
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: disable 64M sleep failed\n", __func__);
 
 	/* SPI hoppint setting*/
 	if (mt6635_SPI_hopping_check(freq)) {
