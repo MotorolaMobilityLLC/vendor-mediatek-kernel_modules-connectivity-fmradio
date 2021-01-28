@@ -498,19 +498,7 @@ static signed int mt6635_pwrup_fine_tune_reg_op(unsigned char *buf, signed int b
 	/* F1 set host control RF register */
 	pkt_size += fm_bop_write(0x60, 0x00000007, &buf[pkt_size], buf_size - pkt_size);
 
-	/* F2 DCOC @ LNA = 7 */
-	pkt_size += fm_bop_write(0x40, 0x00A0, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x03, 0xF6B1, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x01, 0xEEE8, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x3F, 0x3221, &buf[pkt_size], buf_size - pkt_size);
-	/* wait 1ms */
-	pkt_size += fm_bop_udelay(1000, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_rd_until(0x3F, 0x001F, 0x0001, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x3F, 0x0220, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x40, 0x0000, &buf[pkt_size], buf_size - pkt_size);
-	pkt_size += fm_bop_write(0x01, 0xAEE8, &buf[pkt_size], buf_size - pkt_size);
-
-	/* F3 fine tune RF setting */
+	/* F2 fine tune RF setting */
 	pkt_size += fm_bop_write(0x01, 0xBEE8, &buf[pkt_size], buf_size - pkt_size);
 	pkt_size += fm_bop_write(0x03, 0xF6ED, &buf[pkt_size], buf_size - pkt_size);
 	pkt_size += fm_bop_write(0x15, 0x0D80, &buf[pkt_size], buf_size - pkt_size);
@@ -521,6 +509,19 @@ static signed int mt6635_pwrup_fine_tune_reg_op(unsigned char *buf, signed int b
 	pkt_size += fm_bop_write(0x40, 0x0100, &buf[pkt_size], buf_size - pkt_size);
 	pkt_size += fm_bop_write(0x03, 0xFAF5, &buf[pkt_size], buf_size - pkt_size);
 	pkt_size += fm_bop_write(0x05, 0x7A80, &buf[pkt_size], buf_size - pkt_size);
+
+	/* F3 DCOC @ LNA = 7 */
+	pkt_size += fm_bop_write(0x40, 0x01A0, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x03, 0xFAF5, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x07, 0x0100, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x01, 0xEEE8, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x3F, 0x3221, &buf[pkt_size], buf_size - pkt_size);
+	/* wait 1ms */
+	pkt_size += fm_bop_udelay(1000, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_rd_until(0x3F, 0x001F, 0x0001, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x3F, 0x0220, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x40, 0x0100, &buf[pkt_size], buf_size - pkt_size);
+	pkt_size += fm_bop_write(0x01, 0xAEE8, &buf[pkt_size], buf_size - pkt_size);
 
 	/* F4 set DSP control RF register */
 	pkt_size += fm_bop_write(0x60, 0x0000000F, &buf[pkt_size], buf_size - pkt_size);
