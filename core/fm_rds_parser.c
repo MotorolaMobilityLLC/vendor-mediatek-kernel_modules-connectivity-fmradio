@@ -95,7 +95,7 @@ static signed int rds_grp_get(unsigned short *dst, struct rds_rx_t *raw, signed 
 		return -FM_EPARA;
 	}
 
-	if (idx > (MAX_RDS_RX_GROUP_CNT - 1))
+	if (idx > (MAX_RDS_RX_GROUP_CNT - 1) || idx < 0)
 		return -FM_EPARA;
 
 	dst[0] = raw->data[idx].blkA;
@@ -1706,7 +1706,8 @@ static signed int rds_retrieve_g4(unsigned short *block_data, unsigned char SubT
 static signed int rds_retrieve_g14(unsigned short *block_data, unsigned char SubType, struct rds_t *pstRDSData)
 {
 	static signed short preAFON_Num;
-	unsigned char TP_ON, TA_ON, PI_ON, PS_Num, AF_H, AF_L, indx, indx2, num;
+	unsigned char TP_ON, TA_ON, PI_ON, AF_H, AF_L, indx, indx2, num;
+	unsigned short PS_Num = 0;
 	signed int ret = 0;
 
 	WCN_DBG(FM_DBG | RDSC, "RetrieveGroup14 %d\n", SubType);
