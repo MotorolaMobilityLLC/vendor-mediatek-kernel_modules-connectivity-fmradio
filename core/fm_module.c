@@ -26,6 +26,7 @@
 #include <linux/version.h>
 #include <linux/gpio.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 
 #include "fm_config.h"
 #include "fm_main.h"
@@ -1537,8 +1538,7 @@ static signed int mt_fm_probe(struct platform_device *pdev)
 {
 	signed int ret = 0;
 #ifdef CONFIG_OF
-	struct device_node *node = NULL, *pinctl_node = NULL, *pins_node = NULL;
-	unsigned int pin = 0;
+	struct device_node *node = NULL;
 	signed int pin_ret = 0;
 #endif
 
@@ -1549,26 +1549,24 @@ static signed int mt_fm_probe(struct platform_device *pdev)
 	if (!node)
 		WCN_DBG(FM_NTC | MAIN, "FM-OF: no fm device node\n");
 	else {
-		pinctl_node = of_parse_phandle(node, "pinctrl-1", 0);
-		if (pinctl_node) {
-			pins_node = of_get_child_by_name(pinctl_node, "pins_cmd_dat");
-			if (pins_node) {
-				pin_ret = of_property_read_u32(pins_node, "pins", &pin);
-				if (pin_ret)
-					WCN_DBG(FM_NTC | MAIN, "%s cannot find pins\n", __func__);
-				else {
-					g_fm_lna_pin_num = (pin >> 8) & 0xff;
-					WCN_DBG(FM_NTC | MAIN,
-						"%s FM LNA gpio pin number:%d, pinmux:0x%08x.\n",
-						__func__, g_fm_lna_pin_num, pin);
+		pin_ret = of_get_named_gpio(node, "fm_lna_gpio", 0);
+		if (pin_ret < 0)
+			WCN_DBG(FM_NTC | MAIN,
+				"FM-OF: cannot find pins. pin_ret: %d\n",
+				pin_ret);
+		else {
+			g_fm_lna_pin_num = pin_ret;
+			WCN_DBG(FM_NTC | MAIN,
+				"FM-OF: FM LNA gpio pin number:%d.\n",
+				g_fm_lna_pin_num);
 
-					pin_ret = fm_request_gpio(g_fm_lna_pin_num);
-					if (pin_ret)
-						g_fm_lna_pin_num = FM_NO_LNA_PIN;
-				}
+			pin_ret = fm_request_gpio(g_fm_lna_pin_num);
+			if (pin_ret) {
+				g_fm_lna_pin_num = FM_NO_LNA_PIN;
+				WCN_DBG(FM_ERR | MAIN,
+					"FM-OF: fm_request_gpio failed. pin_ret: %d\n",
+					pin_ret);
 			}
-		} else {
-			WCN_DBG(FM_ERR | MAIN, "%s get pinctrl-1 fail\n", __func__);
 		}
 	}
 #endif
