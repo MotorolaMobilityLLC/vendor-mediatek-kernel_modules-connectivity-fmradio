@@ -328,8 +328,8 @@ signed int fm_open(struct fm *fmp)
 		fmp->projectid = chipid;
 		WCN_DBG(FM_NTC | MAIN, "wmt chip id=0x%x\n", chipid);
 
-		if (chipid == 0x6779)
-			top_index = 5;
+		if (fm_wcn_ops.ei.get_top_index)
+			top_index = fm_wcn_ops.ei.get_top_index();
 		else
 			top_index = 4;
 		WCN_DBG(FM_NTC | MAIN, "mcu top index = 0x%x\n", top_index);
@@ -1576,7 +1576,7 @@ signed int fm_tune_tx(struct fm *fm, struct fm_tune_parm *parm)
 signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 {
 	signed int ret = 0;
-	signed int len;
+	signed int len = 0;
 	struct rds_raw_t rds_log;
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
@@ -2730,6 +2730,10 @@ signed int fm_env_setup(void)
 	if (!fm_wcn_ops.tx_lock)
 		return -1;
 
+	fm_wcn_ops.own_lock = fm_lock_create("own_lock");
+	if (!fm_wcn_ops.own_lock)
+		return -1;
+
 	fm_lock_get(fm_ops_lock);
 	fm_lock_get(fm_read_lock);
 	fm_lock_get(fm_rds_cnt);
@@ -2737,6 +2741,7 @@ signed int fm_env_setup(void)
 	fm_lock_get(fm_rxtx_lock);
 	fm_lock_get(fm_rtc_mutex);
 	fm_lock_get(fm_wcn_ops.tx_lock);
+	fm_lock_get(fm_wcn_ops.own_lock);
 	WCN_DBG(FM_NTC | MAIN, "fm locks created\n");
 
 	fm_timer_sys = fm_timer_create("fm_sys_timer");
@@ -2816,7 +2821,10 @@ signed int fm_env_destroy(void)
 
 	ret = fm_lock_put(fm_wcn_ops.tx_lock);
 	if (!ret)
-		fm_rtc_mutex = NULL;
+		fm_wcn_ops.tx_lock = NULL;
+	ret = fm_lock_put(fm_wcn_ops.own_lock);
+	if (!ret)
+		fm_wcn_ops.own_lock = NULL;
 
 	return ret;
 }
