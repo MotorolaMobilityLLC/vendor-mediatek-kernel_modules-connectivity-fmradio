@@ -142,6 +142,11 @@ static signed int fm_drv_switch_clk_64m(void)
 	fm_host_reg_read(0x81026004, &val);
 	/* Set 0x81026004[2] = 0x1 */
 	fm_host_reg_write(0x81026004, val | 0x4);
+	if (ret) {
+		WCN_DBG(FM_ERR | CHIP,
+			"Switch SPI clock to 64MHz failed\n");
+		return -1;
+	}
 
 	return 0;
 }
@@ -155,6 +160,11 @@ static signed int fm_drv_switch_clk_26m(void)
 	fm_host_reg_read(0x81026004, &val);
 	/* Set 0x81026004[2] = 0x0 */
 	fm_host_reg_write(0x81026004, val & 0xFFFFFFFB);
+	if (ret) {
+		WCN_DBG(FM_ERR | CHIP,
+			"Switch SPI clock to 26MHz failed\n");
+		return -1;
+	}
 
 	/* switch SPI clock to 26MHz */
 	fm_host_reg_read(0x81026004, &val);
