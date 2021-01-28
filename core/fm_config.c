@@ -532,6 +532,7 @@ signed int fm_cust_config_setup(const signed char *filepath)
 	} else {
 		memcpy(file_path, filepath, (strlen(filepath) > 50) ? 50 : strlen(filepath));
 		filep = file_path;
+		file_path[50] = '\0';
 		trim_path(&filep);
 	}
 
