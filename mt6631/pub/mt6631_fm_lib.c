@@ -823,7 +823,7 @@ static signed int mt6631_PowerUp(unsigned short *chip_id, unsigned short *device
 
 	if (projectid == 0x6765 || projectid == 0x6761
 		|| projectid == 0x3967 || projectid == 0x6768
-		|| projectid == 0x6785) {
+		|| projectid == 0x6785 || projectid == 0x6779) {
 		/* Set top_clk_en_adie to trigger sleep controller before FM power on */
 		if (projectid == 0x6779) {
 			ret = fm_host_reg_write(0x81021500, 0x00000003);
