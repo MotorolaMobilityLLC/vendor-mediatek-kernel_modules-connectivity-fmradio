@@ -801,7 +801,7 @@ static signed int mt6631_PowerUp(unsigned short *chip_id, unsigned short *device
 	}
 
 	if (projectid == 0x6765 || projectid == 0x6761
-		|| projectid == 0x3967) {
+		|| projectid == 0x3967 || projectid == 0x6768) {
 		/* Set top_clk_en_adie to trigger sleep controller before FM power on */
 		fm_host_reg_read(0x81021500, &tem);   /* Set 0x81021500[1] = 0x1 */
 		tem = tem | 0x00000002;
@@ -959,7 +959,7 @@ static signed int mt6631_PowerDown(void)
 
 	/* Enable 26M crystal sleep */
 	if (projectid == 0x6765 || projectid == 0x6761
-		|| projectid == 0x3967) {
+		|| projectid == 0x3967 || projectid == 0x6768) {
 		WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0\n");
 		ret = fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
 		tem = tem & 0xFF7FFFFF;
