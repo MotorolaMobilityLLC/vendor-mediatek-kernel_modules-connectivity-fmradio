@@ -575,6 +575,8 @@ signed int fm_powerdown(struct fm *fm, int type)
 {
 	signed int ret = 0;
 
+	fm_cqi_check_timer->stop(fm_cqi_check_timer);
+
 	if (type == 1) {	/* 0: RX 1: TX */
 		ret = fm_powerdowntx(fm);
 	} else {
@@ -1627,15 +1629,23 @@ signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 		ret = -FM_EFW;
 	}
 
-	if (fm_low_ops.bi.is_valid_freq && !fm_low_ops.bi.is_valid_freq(parm->freq)) {
-		WCN_DBG(FM_NTC | MAIN, "FM tune to an invalid channel.\n");
-		fm_low_ops.bi.volset(5);
-		fm->vol = 5;
-		fm_cqi_check_timer->start(fm_cqi_check_timer);
-	} else {
-		fm_low_ops.bi.volset(15);
-		fm->vol = 15;
-		WCN_DBG(FM_NTC | MAIN, "FM tune to a valid channel resume volume.\n");
+	if (fm_low_ops.bi.is_valid_freq) {
+		if (fm_low_ops.bi.is_valid_freq(parm->freq)) {
+			if (fm->vol != 15) {
+				fm_low_ops.bi.volset(15);
+				fm->vol = 15;
+				WCN_DBG(FM_NTC | MAIN, "Valid freq, volset: 15\n");
+			}
+			WCN_DBG(FM_NTC | MAIN, "FM tune to a valid channel resume volume.\n");
+		} else {
+			if (fm->vol != 5) {
+				fm_low_ops.bi.volset(5);
+				fm->vol = 5;
+				WCN_DBG(FM_NTC | MAIN, "Not a valid freq, volset: 5\n");
+			}
+			WCN_DBG(FM_NTC | MAIN, "FM tune to an invalid channel.\n");
+			fm_cqi_check_timer->start(fm_cqi_check_timer);
+		}
 	}
 	/* fm_low_ops.bi.mute(false);//open for dbg */
 	fm_op_state_set(fm, FM_STA_PLAY);
@@ -2109,18 +2119,27 @@ void fm_rds_reset_work_func(unsigned long data)
 
 void fm_cqi_check_work_func(unsigned long data)
 {
+	struct fm *fm = g_fm_struct;
+
+	if (!fm)
+		return;
+
 	if (FM_LOCK(fm_ops_lock))
 		return;
 
 	if (fm_low_ops.bi.is_valid_freq) {
-		if (!fm_low_ops.bi.is_valid_freq(g_fm_struct->cur_freq)) {
-			if (g_fm_struct->vol != 5)
-				fm_low_ops.bi.volset(5);
-			WCN_DBG(FM_NTC | MAIN, "Not a valid freq, volset: 5\n");
-		} else {
-			if (g_fm_struct->vol != 15)
+		if (fm_low_ops.bi.is_valid_freq(fm->cur_freq)) {
+			if (fm->vol != 15) {
 				fm_low_ops.bi.volset(15);
-			WCN_DBG(FM_NTC | MAIN, "Valid freq, volset: 15\n");
+				fm->vol = 15;
+				WCN_DBG(FM_NTC | MAIN, "Valid freq, volset: 15\n");
+			}
+		} else {
+			if (fm->vol != 5) {
+				fm_low_ops.bi.volset(5);
+				fm->vol = 5;
+				WCN_DBG(FM_NTC | MAIN, "Not a valid freq, volset: 5\n");
+			}
 		}
 	}
 
