@@ -204,17 +204,37 @@ static int fm_drv_spi_clock_switch(enum fm_spi_speed speed)
 static int drv_get_hw_version(void)
 {
 	int id = fm_wmt_chipid_query();
+	int ret = FM_CONNAC_UNKNOWN;
 
-	if (id == 0x6765 || id == 0x6761 || id == 0x3967)
-		return FM_CONNAC_1_0;
+	switch (id) {
+	case 0x6758:
+	case 0x6759:
+	case 0x6771:
+	case 0x6775:
+	case 0x6797:
+		ret = FM_CONNAC_LEGACY;
+		break;
+	case 0x6765:
+	case 0x6761:
+	case 0x3967:
+		ret = FM_CONNAC_1_0;
+		break;
+	case 0x6768:
+	case 0x6785:
+	case 0x8168:
+		ret = FM_CONNAC_1_2;
+		break;
+	case 0x6779:
+	case 0x6873:
+	case 0x6853:
+		ret = FM_CONNAC_1_5;
+		break;
+	default:
+		ret = FM_CONNAC_UNKNOWN;
+		break;
+	}
 
-	if (id == 0x6768 || id == 0x6785)
-		return FM_CONNAC_1_2;
-
-	if (id == 0x6779 || id == 0x6873 || id == 0x6853)
-		return FM_CONNAC_1_5;
-
-	return FM_CONNAC_1_5;
+	return ret;
 }
 
 static unsigned char drv_get_top_index(void)
