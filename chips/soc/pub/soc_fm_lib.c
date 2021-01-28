@@ -50,9 +50,6 @@ static struct fm_hw_info mt6580_hw_info = {
 	.reserve = 0x00000000,
 };
 
-unsigned char *cmd_buf;
-struct fm_lock *cmd_buf_lock;
-struct fm_res_ctx *fm_res;
 static struct fm_callback *fm_cb_op;
 /* static signed int Chip_Version = mt6580_E1; */
 

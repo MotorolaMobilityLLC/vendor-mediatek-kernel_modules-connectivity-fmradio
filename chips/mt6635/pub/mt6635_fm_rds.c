@@ -294,7 +294,7 @@ static signed int mt6635_rds_gc_reset(struct rds_t *rdsp)
 	return rds_grp_counter_reset(&rdsp->gc);
 }
 
-signed int fm_rds_ops_register(struct fm_basic_interface *bi, struct fm_rds_interface *ri)
+signed int mt6635_fm_rds_ops_register(struct fm_basic_interface *bi, struct fm_rds_interface *ri)
 {
 	signed int ret = 0;
 
@@ -320,7 +320,7 @@ signed int fm_rds_ops_register(struct fm_basic_interface *bi, struct fm_rds_inte
 	return ret;
 }
 
-signed int fm_rds_ops_unregister(struct fm_rds_interface *ri)
+signed int mt6635_fm_rds_ops_unregister(struct fm_rds_interface *ri)
 {
 	signed int ret = 0;
 

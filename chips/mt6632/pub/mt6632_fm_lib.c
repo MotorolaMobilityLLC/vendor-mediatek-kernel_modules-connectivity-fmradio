@@ -48,9 +48,6 @@ static struct fm_hw_info mt6632_hw_info = {
 	.reserve = 0x00000000,
 };
 
-unsigned char *cmd_buf;
-struct fm_lock *cmd_buf_lock;
-struct fm_res_ctx *fm_res;
 static struct fm_callback *fm_cb_op;
 static unsigned char fm_packaging = 1;	/*0:QFN,1:WLCSP */
 static unsigned int fm_sant_flag;	/* 1,Short Antenna;  0, Long Antenna */

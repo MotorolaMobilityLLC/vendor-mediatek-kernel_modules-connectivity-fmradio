@@ -53,7 +53,6 @@ static bool g_fm_stat[3] = {
 	false,		/* TX scan */
 };
 
-#if !defined(MT6631_FM) && !defined(MT6635_FM)
 /* chipid porting table */
 static struct fm_chip_mapping fm_support_chip_array[] = {
 { 0x6572, 0x6627, FM_AD_DIE_CHIP },
@@ -87,7 +86,6 @@ static struct fm_chip_mapping fm_support_chip_array[] = {
 { 0x6768, 0x6631, FM_AD_DIE_CHIP },
 { 0x6779, 0x6635, FM_AD_DIE_CHIP },
 };
-#endif
 
 unsigned char top_index;
 
@@ -283,18 +281,18 @@ signed int fm_wholechip_rst_cb(signed int sta)
 
 static signed int fm_which_chip(unsigned short chipid, enum fm_cfg_chip_type *type)
 {
-	signed short fm_chip  = -1;
-
-#if defined(MT6631_FM)
-	fm_chip = 0x6631;
-	if (type)
-		*type = FM_AD_DIE_CHIP;
-#elif defined(MT6635_FM)
-	fm_chip = 0x6635;
-	if (type)
-		*type = FM_AD_DIE_CHIP;
-#else
+	signed short fm_chip = -1;
 	signed short i = 0;
+
+	if (fm_wcn_ops.ei.get_get_adie) {
+		fm_chip = (signed short)fm_wcn_ops.ei.get_get_adie();
+		if (fm_chip == 0x6631 || fm_chip == 0x6635) {
+			if (type)
+				*type = FM_AD_DIE_CHIP;
+			return fm_chip;
+		}
+	}
+
 	for (i = 0; i < (sizeof(fm_support_chip_array)/sizeof(struct fm_chip_mapping)); i++) {
 		if (chipid == fm_support_chip_array[i].con_chip) {
 			fm_chip = fm_support_chip_array[i].fm_chip;
@@ -310,7 +308,7 @@ static signed int fm_which_chip(unsigned short chipid, enum fm_cfg_chip_type *ty
 			}
 		}
 	}
-#endif
+
 	return fm_chip;
 }
 
@@ -2324,15 +2322,21 @@ static signed int fm_ops_register(struct fm_lowlevel_ops *ops)
 		return ret;
 	}
 
-	ret = fm_low_ops_register(&ops->cb, &ops->bi);
+	if (fm_wcn_ops.ei.low_ops_register)
+		ret = fm_wcn_ops.ei.low_ops_register(&ops->cb, &ops->bi);
+	else
+		ret = -1;
 	if (ret) {
 		WCN_DBG(FM_ERR | MAIN, "fm_low_ops_register fail(%d)\n", ret);
 		return ret;
 	}
 
-	ret = fm_rds_ops_register(&ops->bi, &ops->ri);
+	if (fm_wcn_ops.ei.rds_ops_register)
+		ret = fm_wcn_ops.ei.rds_ops_register(&ops->bi, &ops->ri);
+	else
+		ret = -1;
 	if (ret) {
-		WCN_DBG(FM_ERR | MAIN, "fm_rds_ops_register fail(%d)\n", ret);
+		WCN_DBG(FM_ERR | MAIN, "rds_ops_register fail(%d)\n", ret);
 		return ret;
 	}
 
@@ -2353,13 +2357,19 @@ static signed int fm_ops_unregister(struct fm_lowlevel_ops *ops)
 {
 	signed int ret = 0;
 
-	ret = fm_rds_ops_unregister(&ops->ri);
+	if (fm_wcn_ops.ei.rds_ops_unregister)
+		ret = fm_wcn_ops.ei.rds_ops_unregister(&ops->ri);
+	else
+		ret = -1;
 	if (ret) {
 		WCN_DBG(FM_ERR | MAIN, "fm_rds_ops_unregister fail(%d)\n", ret);
 		return ret;
 	}
 
-	ret = fm_low_ops_unregister(&ops->bi);
+	if (fm_wcn_ops.ei.low_ops_unregister)
+		ret = fm_wcn_ops.ei.low_ops_unregister(&ops->bi);
+	else
+		ret = -1;
 	if (ret) {
 		WCN_DBG(FM_ERR | MAIN, "fm_low_ops_unregister fail(%d)\n", ret);
 		return ret;
