@@ -87,6 +87,11 @@ ifeq ($(FM_CHIP), mt6625)
     ccflags-y += -DMT6625_FM
 endif
 
+ifeq ($(FM_CHIP), mt6627)
+    FM_CHIP := mt6627
+    ccflags-y += -DMT6627_FM
+endif
+
 ifeq ($(FM_CHIP), mt6580)
     FM_CHIP := soc
     ccflags-y += -Dsoc
@@ -95,6 +100,14 @@ endif
 ifeq ($(FM_CHIP), mt0633)
     FM_CHIP := soc
     ccflags-y += -Dsoc
+endif
+
+ifeq ($(FM_CHIP), mt6630)
+    ccflags-y += -DMT6630_FM
+endif
+
+ifeq ($(FM_CHIP), mt6632)
+    ccflags-y += -DMT6632_FM
 endif
 
 ifeq ($(FM_CHIP), mt6631)
