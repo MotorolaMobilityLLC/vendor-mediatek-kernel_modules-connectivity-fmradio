@@ -942,7 +942,7 @@ static bool drv_set_own(void)
 
 	/* polling chipid */
 	drv_host_read(si, 0x18001000, &val);
-	for (i = 0; val != 0x20010000 && i < MAX_SET_OWN_COUNT; i++) {
+	for (i = 0; (val & 0xFFFF0000) != 0x20010000 && i < MAX_SET_OWN_COUNT; i++) {
 		fm_delayus(5000);
 		drv_host_read(si, 0x18001000, &val);
 	}
