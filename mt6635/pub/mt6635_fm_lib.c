@@ -1023,24 +1023,38 @@ static bool mt6635_SetFreq(unsigned short freq)
 	fm_cb_op->cur_freq_set(freq);
 
 	/* FM VCO Calibration */
-	fm_set_bits(0x60, 0x0007, 0xFFF0);  /* Set 0x60 [D3:D0] = 0x07*/
+	ret = fm_set_bits(0x60, 0x0007, 0xFFF0);  /* Set 0x60 [D3:D0] = 0x07*/
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: Host Control RF register 0x60 = 0x7 failed\n", __func__);
+
 	fm_delayus(5);
 	if (freq >= 750) {
 		fm_reg_write(0x37, 0xF68C);
 		fm_reg_write(0x38, 0x0B53);
-		fm_set_bits(0x30, 0x0014 << 8, 0xC0FF);
+		ret = fm_set_bits(0x30, 0x0014 << 8, 0xC0FF);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: Set 0x30 failed\n", __func__);
+
 	} else {
 		fm_reg_write(0x37, 0x0675);
 		fm_reg_write(0x38, 0x0F54);
-		fm_set_bits(0x30, 0x001C << 8, 0xC0FF);
+		ret = fm_set_bits(0x30, 0x001C << 8, 0xC0FF);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: Set 0x30 failed\n", __func__);
 	}
-	fm_set_bits(0x30, 0x0001 << 14, 0xBFFF);
+	ret = fm_set_bits(0x30, 0x0001 << 14, 0xBFFF);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: Set 0x30 failed\n", __func__);
+
 	fm_reg_write(0x40, 0x010F);
 	fm_delayus(5);
 	fm_reg_write(0x36, 0x037A);
 	fm_reg_write(0x32, 0x8000);
 	fm_delayus(200);
-	fm_set_bits(0x3D, 0x0001 << 2, 0xFFFB);
+	ret = fm_set_bits(0x3D, 0x0001 << 2, 0xFFFB);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: Set 0x3D failed\n", __func__);
+
 	fm_reg_write(0x32, 0x0000);
 
 	if (FM_LOCK(cmd_buf_lock))
