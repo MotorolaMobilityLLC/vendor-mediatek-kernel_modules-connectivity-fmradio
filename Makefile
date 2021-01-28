@@ -20,6 +20,9 @@ endif
 
 ccflags-y += -imacros $(AUTOCONF_H)
 
+ifndef TOP
+    TOP := $(srctree)/..
+endif
 # Force build fail on modpost warning
 KBUILD_MODPOST_FAIL_ON_WARNINGS := y
 ###############################################################################
