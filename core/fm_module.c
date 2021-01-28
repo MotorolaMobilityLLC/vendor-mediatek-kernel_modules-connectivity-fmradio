@@ -128,6 +128,19 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				goto out;
 			}
 
+			if (parm.freq <= 0 || parm.freq > FM_FREQ_MAX) {
+				struct fm_tune_parm_old *old_parm =
+					(struct fm_tune_parm_old *)&parm;
+
+				if (old_parm->freq > 0 && old_parm->freq <= FM_FREQ_MAX) {
+					WCN_DBG(FM_WAR | MAIN,
+						"convert to old version fm_tune_parm [%u]->[%u]\n",
+						parm.freq, old_parm->freq);
+					parm.freq = old_parm->freq;
+					parm.deemphasis = 0;
+				}
+			}
+
 			if (parm.deemphasis == 1)
 				fm_config.rx_cfg.deemphasis = 1;
 			else
@@ -176,6 +189,19 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			if (copy_from_user(&parm, (void *)arg, sizeof(struct fm_tune_parm))) {
 				ret = -EFAULT;
 				goto out;
+			}
+
+			if (parm.freq <= 0 || parm.freq > FM_FREQ_MAX) {
+				struct fm_tune_parm_old *old_parm =
+					(struct fm_tune_parm_old *)&parm;
+
+				if (old_parm->freq > 0 && old_parm->freq <= FM_FREQ_MAX) {
+					WCN_DBG(FM_WAR | MAIN,
+						"convert to old version fm_tune_parm [%u]->[%u]\n",
+						parm.freq, old_parm->freq);
+					parm.freq = old_parm->freq;
+					parm.deemphasis = 0;
+				}
 			}
 
 			ret = fm_tune(fm, &parm);
