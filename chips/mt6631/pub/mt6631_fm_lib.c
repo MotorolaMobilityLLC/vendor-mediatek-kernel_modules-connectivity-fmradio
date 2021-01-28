@@ -206,7 +206,7 @@ static signed int mt6631_rampdown(unsigned char *buf, signed int buf_size)
 static signed int mt6631_RampDown(void)
 {
 	signed int ret = 0;
-	unsigned int tem;
+	unsigned int tem = 0;
 	unsigned short pkt_size;
 	signed int projectid = fm_cb_op->projectid_get();
 	/* unsigned short tmp; */

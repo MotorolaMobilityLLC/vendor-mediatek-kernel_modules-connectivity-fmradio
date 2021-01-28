@@ -203,7 +203,7 @@ static signed int mt6635_rampdown(unsigned char *buf, signed int buf_size)
 static signed int mt6635_RampDown(void)
 {
 	signed int ret = 0;
-	unsigned int tem;
+	unsigned int tem = 0;
 	unsigned short pkt_size;
 	/* unsigned short tmp; */
 
