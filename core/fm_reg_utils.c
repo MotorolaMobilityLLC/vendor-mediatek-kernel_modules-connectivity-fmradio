@@ -37,7 +37,8 @@ int fm_ioremap_read(phys_addr_t addr, unsigned int *val)
 	iounmap(vir_addr);
 	release_mem_region(addr, size);
 
-	WCN_DBG(FM_NTC | CHIP, "Read 0x%08x=0x%08x", addr, *val);
+	WCN_DBG(FM_NTC | CHIP, "Read 0x%08lx=0x%08x",
+		(unsigned long)addr, *val);
 
 	return 0;
 }
@@ -57,7 +58,9 @@ int fm_ioremap_write(phys_addr_t addr, unsigned int val)
 	writel(val, vir_addr);
 	iounmap(vir_addr);
 	release_mem_region(addr, size);
-	WCN_DBG(FM_NTC | CHIP, "Write 0x%08x=0x%08x", addr, val);
+
+	WCN_DBG(FM_NTC | CHIP, "Write 0x%08lx=0x%08x",
+		(unsigned long)addr, val);
 
 	return 0;
 }
