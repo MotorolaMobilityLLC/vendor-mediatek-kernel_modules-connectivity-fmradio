@@ -44,7 +44,7 @@
 #if CFG_FM_CONNAC2
 static int (*whole_chip_reset)(signed int sta);
 
-static int fm_pre_whole_chip_rst(void)
+static int fm_pre_whole_chip_rst(enum consys_drv_type drv, char *reason)
 {
 	WCN_DBG(FM_WAR | LINK, "FM pre whole chip rst!\n");
 	if (whole_chip_reset)
