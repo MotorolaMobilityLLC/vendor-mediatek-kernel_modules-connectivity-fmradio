@@ -80,6 +80,7 @@ struct fm_tune_parm {
 	unsigned char band;
 	unsigned char space;
 	unsigned char hilo;
+	unsigned char deemphasis;
 	unsigned short freq;		/* IN/OUT parameter */
 };
 

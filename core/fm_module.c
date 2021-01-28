@@ -128,6 +128,11 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				goto out;
 			}
 
+			if (parm.deemphasis == 1)
+				fm_config.rx_cfg.deemphasis = 1;
+			else
+				fm_config.rx_cfg.deemphasis = 0;
+
 			ret = fm_powerup(fm, &parm);
 			if (ret < 0) {
 				WCN_DBG(FM_NTC | MAIN, "FM_IOCTL_POWERUP:fail in fm_powerup, return\n");
