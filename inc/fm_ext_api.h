@@ -37,6 +37,7 @@ struct fm_ext_interface {
 	int (*wmt_chipid_query)(void);
 	unsigned char (*get_top_index)(void);
 	int (*spi_clock_switch)(enum fm_spi_speed speed);
+	bool (*is_bus_hang)(void);
 
 	struct platform_driver *drv;
 	unsigned int irq_id;
