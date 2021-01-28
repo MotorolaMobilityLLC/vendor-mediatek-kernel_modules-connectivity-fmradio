@@ -389,5 +389,8 @@ void fw_bop_spi_modify(unsigned char subsys, unsigned short addr,
 		       unsigned int mask_and, unsigned int mask_or);
 
 extern struct fm_wcn_reg_ops fm_wcn_ops;
+extern unsigned char *cmd_buf;
+extern struct fm_lock *cmd_buf_lock;
+extern struct fm_res_ctx *fm_res;
 
 #endif /* FM_REG_UTILS_H */

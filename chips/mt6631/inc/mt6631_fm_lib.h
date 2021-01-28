@@ -65,4 +65,9 @@ struct mt6631_full_cqi {
 	unsigned short drssi;		/* delta rssi */
 };
 
+signed int mt6631_fm_low_ops_register(struct fm_callback *cb, struct fm_basic_interface *bi);
+signed int mt6631_fm_low_ops_unregister(struct fm_basic_interface *bi);
+signed int mt6631_fm_rds_ops_register(struct fm_basic_interface *bi, struct fm_rds_interface *ri);
+signed int mt6631_fm_rds_ops_unregister(struct fm_rds_interface *ri);
+
 #endif
