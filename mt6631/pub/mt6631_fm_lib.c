@@ -683,10 +683,8 @@ static signed int mt6631_pwrup_DSP_download(struct fm_patch_tbl *patch_tbl)
 	unsigned char *dsp_buf = NULL;
 	unsigned short tmp_reg = 0;
 
-	mt6631_hw_info.eco_ver = (signed int) mtk_wcn_wmt_hwver_get();
+	mt6631_hw_info.eco_ver = (signed int) mtk_wcn_wmt_ic_info_get(1);
 	WCN_DBG(FM_DBG | CHIP, "ECO version:0x%08x\n", mt6631_hw_info.eco_ver);
-	mt6631_hw_info.eco_ver += 1;
-
 
 	/*  Wholechip FM Power Up: step 3, get mt6631 DSP ROM version */
 	ret = mt6631_get_rom_version();
