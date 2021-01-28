@@ -405,6 +405,19 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			struct fm_top_rw_parm parm_ctl;
 
 			WCN_DBG(FM_INF | MAIN, "FM_IOCTL_TOP_RDWR\n");
+
+#ifdef CONFIG_MTK_USER_BUILD
+			WCN_DBG(FM_ERR | MAIN, "Not support FM_IOCTL_TOP_RDWR\n");
+			ret = -EFAULT;
+			goto out;
+#endif
+
+			if (g_dbg_level != 0xfffffff7) {
+				WCN_DBG(FM_ERR | MAIN, "Not support FM_IOCTL_TOP_RDWR\n");
+				ret = -EFAULT;
+				goto out;
+			}
+
 			if (fm->chipon == false || fm_pwr_state_get(fm) == FM_PWR_OFF) {
 				WCN_DBG(FM_ERR | MAIN, "ERROR, FM chip is OFF\n");
 				ret = -EFAULT;
@@ -439,6 +452,19 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			struct fm_host_rw_parm parm_ctl;
 
 			WCN_DBG(FM_INF | MAIN, "FM_IOCTL_HOST_RDWR\n");
+
+#ifdef CONFIG_MTK_USER_BUILD
+			WCN_DBG(FM_ERR | MAIN, "Not support FM_IOCTL_HOST_RDWR\n");
+			ret = -EFAULT;
+			goto out;
+#endif
+
+			if (g_dbg_level != 0xfffffff7) {
+				WCN_DBG(FM_ERR | MAIN, "Not support FM_IOCTL_HOST_RDWR\n");
+				ret = -EFAULT;
+				goto out;
+			}
+
 			if (fm->chipon == false || fm_pwr_state_get(fm) == FM_PWR_OFF) {
 				WCN_DBG(FM_ERR | MAIN, "ERROR, FM chip is OFF\n");
 				ret = -EFAULT;
@@ -456,6 +482,7 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				ret = -FM_EPARA;
 				goto out;
 			}
+			WCN_DBG(FM_NTC | MAIN, "rw? (%d), addr: %x\n", parm_ctl.rw_flag, parm_ctl.addr);
 			if (parm_ctl.rw_flag == 0)
 				ret = fm_host_write(fm, parm_ctl.addr, parm_ctl.val);
 			else
