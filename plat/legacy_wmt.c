@@ -116,7 +116,7 @@ static signed int fm_drv_switch_clk_64m(void)
 	int i = 0, ret = 0;
 
 	/* switch SPI clock to 64MHz */
-	ret = fm_host_reg_read(0x81026004, &val);
+	fm_host_reg_read(0x81026004, &val);
 	/* Set 0x81026004[0] = 0x1 */
 	ret = fm_host_reg_write(0x81026004, val | 0x1);
 	if (ret) {
@@ -157,7 +157,7 @@ static signed int fm_drv_switch_clk_26m(void)
 	fm_host_reg_write(0x81026004, val & 0xFFFFFFFB);
 
 	/* switch SPI clock to 26MHz */
-	ret = fm_host_reg_read(0x81026004, &val);
+	fm_host_reg_read(0x81026004, &val);
 	/* Set 0x81026004[0] = 0x0 */
 	ret = fm_host_reg_write(0x81026004, val & 0xFFFFFFFE);
 	if (ret) {
