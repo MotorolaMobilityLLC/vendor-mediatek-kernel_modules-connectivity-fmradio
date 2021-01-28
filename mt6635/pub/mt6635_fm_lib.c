@@ -1034,18 +1034,20 @@ static bool mt6635_SetFreq(unsigned short freq)
 		WCN_DBG(FM_ERR | CHIP, "set freq wr 0x65 failed\n");
 		return false;
 	}
+
+	WCN_DBG(FM_NTC | CHIP, "%s: Turn on 64M PLL\n", __func__);
+	/*Disable TOP2/64M sleep*/
+	ret = fm_host_reg_read(0x81021200, &reg_val);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: read 64M reg 0x81021200 failed\n", __func__);
+	reg_val |= 0x00800000;
+	ret = fm_host_reg_write(0x81021200, reg_val);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "%s: disable 64M sleep failed\n", __func__);
+
 	/* SPI hoppint setting*/
 	if (mt6635_SPI_hopping_check(freq)) {
-
 		WCN_DBG(FM_NTC | CHIP, "%s: freq:%d is SPI hopping channel,turn on 64M PLL\n", __func__, freq);
-		/*Disable TOP2/64M sleep*/
-		ret = fm_host_reg_read(0x81021200, &reg_val);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: read 64M reg 0x81021200 failed\n", __func__);
-		reg_val |= 0x00800000;
-		ret = fm_host_reg_write(0x81021200, reg_val);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: disable 64M sleep failed\n", __func__);
 		/* lock 64M */
 		ret = fm_host_reg_read(0x80023008, &reg_val);
 		if (ret)
