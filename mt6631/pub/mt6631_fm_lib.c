@@ -208,6 +208,7 @@ static signed int mt6631_RampDown(void)
 	signed int ret = 0;
 	unsigned int tem;
 	unsigned short pkt_size;
+	signed int projectid = fm_cb_op->projectid_get();
 	/* unsigned short tmp; */
 
 	WCN_DBG(FM_DBG | CHIP, "ramp down\n");
@@ -223,12 +224,22 @@ static signed int mt6631_RampDown(void)
 	WCN_DBG(FM_DBG | CHIP, "RampDown Switch SPI clock to 26MHz\n");
 
 	/* unlock 64M */
-	ret = fm_host_reg_read(0x80026000, &tem);
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M reg 0x80026000 failed\n", __func__);
-	ret = fm_host_reg_write(0x80026000, tem & (~(0x1 << 28)));
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
+	if (projectid != 0x6768 && projectid != 0x6785) {
+		ret = fm_host_reg_read(0x80026000, &tem);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M reg 0x80026000 failed\n", __func__);
+		ret = fm_host_reg_write(0x80026000, tem & (~(0x1 << 28)));
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
+
+	} else {
+		ret = fm_host_reg_read(0x80023008, &tem);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80023008 failed\n", __func__);
+		ret = fm_host_reg_write(0x80023008, tem | (~(0x1 << 21)));
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
+	}
 
 	/* Rlease TOP2/64M sleep */
 	ret = fm_host_reg_read(0x81021138, &tem);   /* Set 0x81021138[7] = 0x0 */
@@ -801,7 +812,8 @@ static signed int mt6631_PowerUp(unsigned short *chip_id, unsigned short *device
 	}
 
 	if (projectid == 0x6765 || projectid == 0x6761
-		|| projectid == 0x3967 || projectid == 0x6768) {
+		|| projectid == 0x3967 || projectid == 0x6768
+		|| projectid == 0x6785) {
 		/* Set top_clk_en_adie to trigger sleep controller before FM power on */
 		fm_host_reg_read(0x81021500, &tem);   /* Set 0x81021500[1] = 0x1 */
 		tem = tem | 0x00000002;
@@ -942,12 +954,22 @@ static signed int mt6631_PowerDown(void)
 		WCN_DBG(FM_ALT | CHIP, "PowerDown: switch SPI clock to 26M failed\n");
 
 	/* unlock 64M */
-	ret = fm_host_reg_read(0x80026000, &tem);
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M reg 0x80026000 failed\n", __func__);
-	ret = fm_host_reg_write(0x80026000, tem & (~(0x1 << 28)));
-	if (ret)
-		WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
+	if (projectid != 0x6768 && projectid != 0x6785) {
+		ret = fm_host_reg_read(0x80026000, &tem);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M reg 0x80026000 failed\n", __func__);
+		ret = fm_host_reg_write(0x80026000, tem & (~(0x1 << 28)));
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: unlock 64M failed\n", __func__);
+
+	} else {
+		ret = fm_host_reg_read(0x80023008, &tem);
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80023008 failed\n", __func__);
+		ret = fm_host_reg_write(0x80023008, tem | (~(0x1 << 21)));
+		if (ret)
+			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
+	}
 
 	/*Release TOP2/64M sleep*/
 	WCN_DBG(FM_DBG | CHIP, "PowerDown: Release TOP2/64M sleep\n");
@@ -959,7 +981,8 @@ static signed int mt6631_PowerDown(void)
 
 	/* Enable 26M crystal sleep */
 	if (projectid == 0x6765 || projectid == 0x6761
-		|| projectid == 0x3967 || projectid == 0x6768) {
+		|| projectid == 0x3967 || projectid == 0x6768
+		|| projectid == 0x6785) {
 		WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0\n");
 		ret = fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
 		tem = tem & 0xFF7FFFFF;
@@ -1029,6 +1052,7 @@ static bool mt6631_SetFreq(unsigned short freq)
 	unsigned int i = 0;
 	bool flag_spi_hopping = false;
 	unsigned short tmp_reg[6] = {0};
+	signed int projectid = fm_cb_op->projectid_get();
 
 	fm_cb_op->cur_freq_set(freq);
 
@@ -1111,16 +1135,28 @@ static bool mt6631_SetFreq(unsigned short freq)
 			WCN_DBG(FM_ERR | CHIP, "%s: disable 64M sleep failed\n", __func__);
 
 		/* lock 64M */
-		ret = fm_host_reg_read(0x80026000, &reg_val);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80026000 failed\n", __func__);
-		ret = fm_host_reg_write(0x80026000, reg_val | (0x1 << 28));
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
+		if (projectid != 0x6768 && projectid != 0x6785) {
+			ret = fm_host_reg_read(0x80026000, &reg_val);
+			if (ret)
+				WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80026000 failed\n", __func__);
+			ret = fm_host_reg_write(0x80026000, reg_val | (0x1 << 28));
+			if (ret)
+				WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
+		} else {
+			ret = fm_host_reg_read(0x80023008, &reg_val);
+			if (ret)
+				WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80023008 failed\n", __func__);
+			ret = fm_host_reg_write(0x80023008, reg_val | (0x1 << 21));
+			if (ret)
+				WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
+		}
 
 		for (i = 0; i < 100; i++) { /*rd 0x8002110C until D27 ==1*/
 
-			ret = fm_host_reg_read(0x8002110C, &reg_val);
+			if (projectid != 0x6768 && projectid != 0x6785)
+				ret = fm_host_reg_read(0x8002110C, &reg_val);
+			else
+				ret = fm_host_reg_read(0x80021118, &reg_val);
 
 			if (reg_val & 0x08000000) {
 				flag_spi_hopping = true;
@@ -1612,6 +1648,7 @@ static signed int mt6631_soft_mute_tune(unsigned short freq, signed int *rssi, s
 	signed int RSSI = 0, PAMD = 0, MR = 0, ATDC = 0;
 	unsigned int PRX = 0, ATDEV = 0;
 	unsigned short softmuteGainLvl = 0;
+	signed int projectid = fm_cb_op->projectid_get();
 
 	ret = mt6631_chan_para_get(freq);
 	if (ret == 2)
@@ -1632,16 +1669,28 @@ static signed int mt6631_soft_mute_tune(unsigned short freq, signed int *rssi, s
 			WCN_DBG(FM_ERR | CHIP, "%s: disable 64M sleep failed\n", __func__);
 
 		/* lock 64M */
-		ret = fm_host_reg_read(0x80026000, &reg_val);
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80026000 failed\n", __func__);
-		ret = fm_host_reg_write(0x80026000, reg_val | (0x1 << 28));
-		if (ret)
-			WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
+		if (projectid != 0x6768 && projectid != 0x6785) {
+			ret = fm_host_reg_read(0x80026000, &reg_val);
+			if (ret)
+				WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80026000 failed\n", __func__);
+			ret = fm_host_reg_write(0x80026000, reg_val | (0x1 << 28));
+			if (ret)
+				WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
+		} else {
+			ret = fm_host_reg_read(0x80023008, &reg_val);
+			if (ret)
+				WCN_DBG(FM_ERR | CHIP, "%s: lock 64M reg 0x80023008 failed\n", __func__);
+			ret = fm_host_reg_write(0x80023008, reg_val | (0x1 << 21));
+			if (ret)
+				WCN_DBG(FM_ERR | CHIP, "%s: lock 64M failed\n", __func__);
+		}
 
 		for (i = 0; i < 100; i++) { /*rd 0x8002110C until D27 ==1*/
 
-			ret = fm_host_reg_read(0x8002110C, &reg_val);
+			if (projectid != 0x6768 && projectid != 0x6785)
+				ret = fm_host_reg_read(0x8002110C, &reg_val);
+			else
+				ret = fm_host_reg_read(0x80021118, &reg_val);
 
 			if (reg_val & 0x08000000) {
 				flag_spi_hopping = true;
