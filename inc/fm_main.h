@@ -102,7 +102,6 @@ struct fm_seek_parm {
 	unsigned short freq;		/* IN/OUT parameter */
 };
 
-#ifdef CONFIG_MTK_FM_50KHZ_SUPPORT
 struct fm_scan_parm {
 	unsigned char err;
 	unsigned char band;
@@ -112,17 +111,6 @@ struct fm_scan_parm {
 	unsigned short ScanTBL[26];	/* need no less than the chip */
 	unsigned short ScanTBLSize;	/* IN/OUT parameter */
 };
-#else
-struct fm_scan_parm {
-	unsigned char err;
-	unsigned char band;
-	unsigned char space;
-	unsigned char hilo;
-	unsigned short freq;		/* OUT parameter */
-	unsigned short ScanTBL[16];	/* need no less than the chip */
-	unsigned short ScanTBLSize;	/* IN/OUT parameter */
-};
-#endif
 
 struct fm_cqi {
 	signed int ch;
@@ -187,19 +175,11 @@ struct fm_tune_t {
 	void *priv;
 };
 
-#ifdef CONFIG_MTK_FM_50KHZ_SUPPORT
 struct fm_rssi_req {
 	unsigned short num;
 	unsigned short read_cnt;
 	struct fm_ch_rssi cr[26 * 16];
 };
-#else
-struct fm_rssi_req {
-	unsigned short num;
-	unsigned short read_cnt;
-	struct fm_ch_rssi cr[16 * 16];
-};
-#endif
 
 struct fm_rds_tx_parm {
 	unsigned char err;
