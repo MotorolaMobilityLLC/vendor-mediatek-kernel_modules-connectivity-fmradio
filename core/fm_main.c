@@ -459,7 +459,6 @@ signed int fm_powerup(struct fm *fm, struct fm_tune_parm *parm)
 		goto out;
 	}
 
-	fm_enable_eint();
 	fm_cur_freq_set(parm->freq);
 
 	parm->err = FM_SUCCESS;
@@ -561,7 +560,6 @@ static signed int pwrdown_flow(struct fm *fm)
 		/* Disable all interrupt */
 		fm_disable_rds_BlerCheck();
 		fm_low_ops.ri.rds_onoff(fm->pstRDSData, false);
-		fm_disable_eint();
 
 		fm_pwr_state_set(fm, FM_PWR_OFF);
 
