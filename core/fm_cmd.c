@@ -140,7 +140,7 @@ signed int fm_bop_top_write(unsigned short addr, unsigned int value, unsigned ch
 		return -2;
 	}
 
-	buf[0] = FM_TOP_WRITE_BASIC_OP;
+	buf[0] = FM_WRITE_SPI_BASIC_OP;
 	buf[1] = FM_TOP_WRITE_BOP_SIZE;
 	buf[2] = top_index;
 	buf[3] = (unsigned char) ((addr) & 0x00FF);
@@ -170,7 +170,7 @@ signed int fm_bop_top_rd_until(unsigned short addr, unsigned int mask, unsigned 
 		return -2;
 	}
 
-	buf[0] = FM_TOP_RD_UNTIL_BASIC_OP;
+	buf[0] = FM_RD_SPI_UNTIL_BASIC_OP;
 	buf[1] = FM_TOP_RD_UNTIL_BOP_SIZE;
 	buf[2] = top_index;
 	buf[3] = (unsigned char) ((addr) & 0x00FF);

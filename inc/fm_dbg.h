@@ -16,6 +16,7 @@
 
 /* #include <linux/kernel.h> //for printk() */
 #include <linux/printk.h>
+#include <linux/ratelimit.h>
 
 /* DBG zone */
 #define BASE	4
