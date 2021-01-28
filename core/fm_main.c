@@ -14,14 +14,14 @@
 #include <linux/kernel.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
-#include <mtk_wcn_cmb_stub.h>
 
 #include "fm_main.h"
 #include "fm_err.h"
+#include "fm_reg_utils.h"
 /* #include "fm_cust_cfg.h" */
-#include "osal_typedef.h"
-#include "wmt_exp.h"
 #include "fm_cmd.h"
+#include "fm_reg_utils.h"
+
 /* fm main data structure */
 static struct fm *g_fm_struct;
 /* we must get low level interface first, when add a new chip, the main effort is this interface */
@@ -103,7 +103,6 @@ static void fm_rds_reset_work_func(unsigned long data);
 /* then fm_eint_handler will schedule fm_eint_work_func to run */
 static void fm_eint_handler(void);
 static void fm_eint_work_func(unsigned long data);
-static signed int fm_rds_parser(struct rds_rx_t *rds_raw, signed int rds_size);
 static signed int pwrdown_flow(struct fm *fm);
 
 static unsigned short fm_cur_freq_get(void)
@@ -313,7 +312,7 @@ static signed int fm_which_chip(unsigned short chipid, enum fm_cfg_chip_type *ty
 signed int fm_open(struct fm *fmp)
 {
 	signed int ret = 0;
-	signed int chipid;
+	signed int chipid = 0;
 
 	if (fmp == NULL) {
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
@@ -324,7 +323,8 @@ signed int fm_open(struct fm *fmp)
 		if (FM_LOCK(fm_ops_lock))
 			return -FM_ELOCK;
 
-		chipid = mtk_wcn_wmt_chipid_query();
+		if (fm_wcn_ops.ei.wmt_chipid_query)
+			chipid = fm_wcn_ops.ei.wmt_chipid_query();
 		fmp->projectid = chipid;
 		WCN_DBG(FM_NTC | MAIN, "wmt chip id=0x%x\n", chipid);
 
@@ -2255,7 +2255,7 @@ static void fm_eint_handler(void)
 		fm->eint_wkthd->add_work(fm->eint_wkthd, fm->eint_wk);
 }
 
-static signed int fm_rds_parser(struct rds_rx_t *rds_raw, signed int rds_size)
+signed int fm_rds_parser(struct rds_rx_t *rds_raw, signed int rds_size)
 {
 	struct fm *fm = g_fm_struct;	/* (struct fm *)work->data; */
 	struct rds_t *pstRDSData = fm->pstRDSData;
@@ -2276,7 +2276,8 @@ static signed int fm_rds_parser(struct rds_rx_t *rds_raw, signed int rds_size)
 
 static void fm_eint_work_func(unsigned long data)
 {
-	fm_event_parser(fm_rds_parser);
+	if (fm_wcn_ops.ei.eint_handler)
+		fm_wcn_ops.ei.eint_handler();
 	/* re-enable eint if need */
 	fm_enable_eint();
 }
@@ -2297,6 +2298,12 @@ static signed int fm_callback_register(struct fm_callback *cb)
 static signed int fm_ops_register(struct fm_lowlevel_ops *ops)
 {
 	signed int ret = 0;
+
+	ret = fm_wcn_ops_register();
+	if (ret) {
+		WCN_DBG(FM_ERR | MAIN, "fm_wcn_ops_register fail(%d)\n", ret);
+		return ret;
+	}
 
 	ret = fm_callback_register(&ops->cb);
 	if (ret) {
@@ -2719,12 +2726,17 @@ signed int fm_env_setup(void)
 	if (!fm_rxtx_lock)
 		return -1;
 
+	fm_wcn_ops.tx_lock = fm_lock_create("tx_lock");
+	if (!fm_wcn_ops.tx_lock)
+		return -1;
+
 	fm_lock_get(fm_ops_lock);
 	fm_lock_get(fm_read_lock);
 	fm_lock_get(fm_rds_cnt);
 	fm_spin_lock_get(fm_timer_lock);
 	fm_lock_get(fm_rxtx_lock);
 	fm_lock_get(fm_rtc_mutex);
+	fm_lock_get(fm_wcn_ops.tx_lock);
 	WCN_DBG(FM_NTC | MAIN, "fm locks created\n");
 
 	fm_timer_sys = fm_timer_create("fm_sys_timer");
@@ -2801,6 +2813,10 @@ signed int fm_env_destroy(void)
 	if (!ret)
 		fm_cqi_check_timer = NULL;
 #endif
+
+	ret = fm_lock_put(fm_wcn_ops.tx_lock);
+	if (!ret)
+		fm_rtc_mutex = NULL;
 
 	return ret;
 }
