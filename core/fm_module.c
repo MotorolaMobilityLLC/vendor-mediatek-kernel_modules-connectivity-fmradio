@@ -285,6 +285,8 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			}
 
 			cpy_size = cqi_req.ch_num * sizeof(struct fm_cqi);
+			if (cpy_size > tmp)
+				cpy_size = tmp;
 			if (copy_to_user((void *)cqi_req.cqi_buf, buf, cpy_size)) {
 				fm_free(buf);
 				ret = -EFAULT;
