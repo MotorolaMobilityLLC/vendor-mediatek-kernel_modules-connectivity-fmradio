@@ -392,8 +392,13 @@ signed int fm_spin_lock_put(struct fm_lock *thiz)
  * fm timer
  *
  */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+static signed int fm_timer_init(struct fm_timer *thiz, void (*timeout) (struct timer_list *timer),
+			    unsigned long data, signed long time, signed int flag)
+#else
 static signed int fm_timer_init(struct fm_timer *thiz, void (*timeout) (unsigned long data),
 			    unsigned long data, signed long time, signed int flag)
+#endif
 {
 	struct timer_list *timerlist = (struct timer_list *)thiz->priv;
 
@@ -403,9 +408,14 @@ static signed int fm_timer_init(struct fm_timer *thiz, void (*timeout) (unsigned
 	thiz->data = data;
 	thiz->timeout_ms = time;
 
-	timerlist->expires = jiffies + (thiz->timeout_ms) / (1000 / HZ);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+	timer_setup(timerlist, thiz->timeout_func, 0);
+#else
+	init_timer(timerlist);
 	timerlist->function = thiz->timeout_func;
 	timerlist->data = (unsigned long)thiz->data;
+#endif
+	timerlist->expires = jiffies + (thiz->timeout_ms) / (1000 / HZ);
 
 	return 0;
 }
@@ -465,8 +475,6 @@ struct fm_timer *fm_timer_create(const signed char *name)
 		fm_free(tmp);
 		return NULL;
 	}
-
-	init_timer(timerlist);
 
 	fm_memcpy(tmp->name, name, (strlen(name) > FM_NAME_MAX) ? (FM_NAME_MAX) : (strlen(name)));
 	tmp->priv = timerlist;
