@@ -1083,7 +1083,6 @@ static signed int mt6635_set_freq_fine_tune_reg_op(unsigned char *buf, signed in
 	/* enable DCOC IDAC auto-disable */
 	pkt_size += fm_bop_modify(0x33, 0xFDFF, 0x0200, &buf[pkt_size], buf_size - pkt_size);
 
-
 	/* F4 set DSP control RF register */
 	pkt_size += fm_bop_write(0x60, 0x000F, &buf[pkt_size], buf_size - pkt_size);
 
