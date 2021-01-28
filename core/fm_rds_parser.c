@@ -1669,6 +1669,12 @@ static signed int rds_retrieve_g4(unsigned short *block_data, unsigned char SubT
 		if ((block_data[4] & FM_RDS_GDBK_IND_C) && (block_data[4] & FM_RDS_GDBK_IND_D)) {
 			MJD = (unsigned int) (((block_data[1] & 0x0003) << 15) + ((block_data[2] & 0xFFFE) >> 1));
 			year = (MJD * 100 - 1507820) / 36525;
+
+			if (year > 1000) {
+				WCN_DBG(FM_DBG | RDSC, "Abnormal year: %d.\n", year);
+				return ret;
+			}
+
 			month = (MJD * 10000 - 149561000 - 3652500 * year) / 306001;
 
 			if ((month == 14) || (month == 15))
