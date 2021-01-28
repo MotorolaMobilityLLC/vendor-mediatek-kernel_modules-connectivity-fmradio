@@ -18,6 +18,7 @@
 #include "fm_link.h"
 #include "fm_utils.h"
 #include "fm_reg_utils.h"
+#include "plat.h"
 
 struct fm_wcn_reg_ops fm_wcn_ops;
 

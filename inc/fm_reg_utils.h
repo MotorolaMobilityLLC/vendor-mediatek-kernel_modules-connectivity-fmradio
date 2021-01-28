@@ -320,24 +320,6 @@ enum {
 	DSP_HWCOEFF
 };
 
-enum {
-	SYS_SPI_WF1 = 0x00,
-	SYS_SPI_WF  = 0x01,
-	SYS_SPI_BT  = 0x02,
-	SYS_SPI_FM  = 0x03,
-	SYS_SPI_GPS = 0x04,
-	SYS_SPI_TOP = 0x05,
-	SYS_SPI_WF2 = 0x06,
-	SYS_SPI_WF3 = 0x07,
-	SYS_SPI_MAX
-};
-
-enum {
-	SYS_SPI_OK = 0,
-	SYS_SPI_BUSY,
-	SYS_SPI_ERR
-};
-
 struct fm_wcn_reg_info {
 	phys_addr_t spi_phy_addr;
 	void __iomem *spi_vir_addr;
