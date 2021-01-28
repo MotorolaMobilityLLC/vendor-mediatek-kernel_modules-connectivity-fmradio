@@ -31,6 +31,15 @@ struct fm_patch_tbl {
 	signed char *hwcoeff;
 };
 
+struct fm_file_read_data {
+	const signed char *filename;
+	unsigned char *dst;
+	signed int len;
+	signed int position;
+	signed int ret;
+	struct completion comp;
+};
+
 extern signed int fm_file_read(const signed char *filename, unsigned char *dst, signed int len, signed int position);
 
 extern signed int fm_file_write(const signed char *filename, unsigned char *dst, signed int len, signed int *ppos);
