@@ -1542,18 +1542,18 @@ static signed int mt6631_full_cqi_get(signed int min_freq, signed int max_freq, 
 				for (i = 0; i < fm_res->cqi[1]; i++) {
 					/* just for debug */
 					WCN_DBG(FM_NTC | CHIP,
-						"%04d, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x,\n",
+						"freq %d, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x\n",
 						p_cqi[i].ch, p_cqi[i].rssi, p_cqi[i].pamd,
 						p_cqi[i].pr, p_cqi[i].fpamd, p_cqi[i].mr,
 						p_cqi[i].atdc, p_cqi[i].prx, p_cqi[i].atdev,
 						p_cqi[i].smg, p_cqi[i].drssi);
 					/* format to buffer */
 					if (sprintf(cqi_log_buf,
-						    "%04d, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x,\n",
-						    p_cqi[i].ch, p_cqi[i].rssi, p_cqi[i].pamd,
-						    p_cqi[i].pr, p_cqi[i].fpamd, p_cqi[i].mr,
-						    p_cqi[i].atdc, p_cqi[i].prx, p_cqi[i].atdev,
-						    p_cqi[i].smg, p_cqi[i].drssi) < 0)
+							"%04d, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x, %04x,\n",
+							p_cqi[i].ch, p_cqi[i].rssi, p_cqi[i].pamd,
+							p_cqi[i].pr, p_cqi[i].fpamd, p_cqi[i].mr,
+							p_cqi[i].atdc, p_cqi[i].prx, p_cqi[i].atdev,
+							p_cqi[i].smg, p_cqi[i].drssi) < 0)
 						WCN_DBG(FM_NTC | CHIP, "sprintf fail\n");
 					/* write back to log file */
 					fm_file_write(cqi_log_path, cqi_log_buf, strlen(cqi_log_buf), &pos);
