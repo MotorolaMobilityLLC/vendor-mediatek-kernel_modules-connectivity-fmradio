@@ -18,11 +18,11 @@
 #define AP_BASE_ADDRESS             0x18000000
 #define MCU_CFG_ADDR                (AP_BASE_ADDRESS + 0x0)
 #define MCU_CFG_CONSYS_BASE         MCU_CFG_ADDR
-#define MCU_CFG_SIZE                0x5000
+#define MCU_CFG_SIZE                0x9000
 #define TOP_MISC_OFF_ADDR           (AP_BASE_ADDRESS + 0x60000)
 #define TOP_MISC_OFF_CONSYS_BASE    TOP_MISC_OFF_ADDR
-#define TOP_MISC_OFF_SIZE           0x10000
-#define TOP_RF_SPI_AON_ADDR         (AP_BASE_ADDRESS + 0x8000)
+#define TOP_MISC_OFF_SIZE           0x1000
+#define TOP_RF_SPI_AON_ADDR         (AP_BASE_ADDRESS + 0x4000)
 #define TOP_RF_SPI_AON_CONSYS_BASE  TOP_RF_SPI_AON_ADDR
 #define TOP_RF_SPI_AON_SIZE         0x1000
 #else
@@ -71,6 +71,7 @@ static int drv_sys_spi_read(
 	struct fm_spi_interface *si, unsigned int subsystem,
 	unsigned int addr, unsigned int *data)
 {
+	WCN_DBG(FM_DBG | CHIP, "[0x%08x]=[0x%08x]\n", addr, *data);
 	return conninfra_spi_read(subsystem, addr, data);
 }
 
@@ -78,9 +79,174 @@ static int drv_sys_spi_write(
 	struct fm_spi_interface *si, unsigned int subsystem,
 	unsigned int addr, unsigned int data)
 {
+	WCN_DBG(FM_DBG | CHIP, "[0x%08x]=[0x%08x]\n", addr, data);
 	return conninfra_spi_write(subsystem, addr, data);
 }
-#endif
+#else /* CFG_FM_CONNAC2 */
+static int sys_spi_wait(unsigned int spi_busy)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	unsigned int spi_count, rdata;
+
+	/* It needs to prevent infinite loop */
+	for (spi_count = 0; spi_count < FM_SPI_COUNT_LIMIT; spi_count++) {
+		si->spi_read(si, SYS_SPI_STA, &rdata);
+		if ((rdata & spi_busy) == 0)
+			break;
+	}
+	if (spi_count == FM_SPI_COUNT_LIMIT) {
+		WCN_DBG(FM_WAR | CHIP,
+			"SPI busy[0x%08x], retry count reached maximum.\n",
+			rdata);
+		return FM_SYS_SPI_BUSY;
+	}
+	return FM_SYS_SPI_OK;
+}
+
+static int fm_sys_spi_read(
+	struct fm_spi_interface *si, unsigned int subsystem,
+	unsigned int addr, unsigned int *data)
+{
+	unsigned int spi_busy, spi_addr, spi_mask, spi_wdat, spi_rdat, rdata;
+
+	if (!si->spi_read || !si->spi_write) {
+		WCN_DBG(FM_ERR | CHIP, "spi api is NULL.\n");
+		return FM_SYS_SPI_ERR;
+	}
+
+	switch (subsystem) {
+	case SYS_SPI_WF:
+		spi_busy =  1 << SYS_SPI_STA_WF_BUSY_SHFT;
+		spi_addr = SYS_SPI_WF_ADDR_ADDR;
+		spi_mask = SYS_SPI_WF_RDAT_MASK;
+		spi_wdat = SYS_SPI_WF_WDAT_ADDR;
+		spi_rdat = SYS_SPI_WF_RDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_WF | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_BT:
+		spi_busy =  1 << SYS_SPI_STA_BT_BUSY_SHFT;
+		spi_addr = SYS_SPI_BT_ADDR_ADDR;
+		spi_mask = SYS_SPI_BT_RDAT_MASK;
+		spi_wdat = SYS_SPI_BT_WDAT_ADDR;
+		spi_rdat = SYS_SPI_BT_RDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_BT | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_FM:
+		spi_busy =  1 << SYS_SPI_STA_FM_BUSY_SHFT;
+		spi_addr = SYS_SPI_FM_ADDR_ADDR;
+		spi_mask = SYS_SPI_FM_RDAT_MASK;
+		spi_wdat = SYS_SPI_FM_WDAT_ADDR;
+		spi_rdat = SYS_SPI_FM_RDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_FM | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_GPS:
+		spi_busy =  1 << SYS_SPI_STA_GPS_BUSY_SHFT;
+		spi_addr = SYS_SPI_GPS_ADDR_ADDR;
+		spi_mask = SYS_SPI_GPS_RDAT_MASK;
+		spi_wdat = SYS_SPI_GPS_WDAT_ADDR;
+		spi_rdat = SYS_SPI_GPS_RDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_GPS | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_TOP:
+		spi_busy =  1 << SYS_SPI_STA_TOP_BUSY_SHFT;
+		spi_addr = SYS_SPI_TOP_ADDR_ADDR;
+		spi_mask = SYS_SPI_TOP_RDAT_MASK;
+		spi_wdat = SYS_SPI_TOP_WDAT_ADDR;
+		spi_rdat = SYS_SPI_TOP_RDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_TOP | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_WF1:
+		spi_busy =  1 << SYS_SPI_STA_WF_BUSY_SHFT;
+		spi_addr = SYS_SPI_WF_ADDR_ADDR;
+		spi_mask = SYS_SPI_WF_RDAT_MASK;
+		spi_wdat = SYS_SPI_WF_WDAT_ADDR;
+		spi_rdat = SYS_SPI_WF_RDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_WF1 | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	default:
+		return FM_SYS_SPI_ERR;
+	}
+
+	if (sys_spi_wait(spi_busy) == FM_SYS_SPI_BUSY)
+		return FM_SYS_SPI_BUSY;
+
+	si->spi_write(si, spi_addr, addr);
+	si->spi_write(si, spi_wdat, 0);
+
+	sys_spi_wait(spi_busy);
+
+	si->spi_read(si, spi_rdat, &rdata);
+	*data = rdata & spi_mask;
+
+	WCN_DBG(FM_DBG | CHIP, "[0x%08x]=[0x%08x]\n", addr, *data);
+
+	return FM_SYS_SPI_OK;
+}
+
+static int fm_sys_spi_write(
+	struct fm_spi_interface *si, unsigned int subsystem,
+	unsigned int addr, unsigned int data)
+{
+	unsigned int spi_busy, spi_addr, spi_mask, spi_wdat;
+
+	if (!si->spi_read || !si->spi_write) {
+		WCN_DBG(FM_ERR | CHIP, "spi api is NULL.\n");
+		return FM_SYS_SPI_ERR;
+	}
+
+	switch (subsystem) {
+	case SYS_SPI_WF:
+		spi_busy =  1 << SYS_SPI_STA_WF_BUSY_SHFT;
+		spi_addr = SYS_SPI_WF_ADDR_ADDR;
+		spi_mask = SYS_SPI_WF_WDAT_MASK;
+		spi_wdat = SYS_SPI_WF_WDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_WF | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_BT:
+		spi_busy =  1 << SYS_SPI_STA_BT_BUSY_SHFT;
+		spi_addr = SYS_SPI_BT_ADDR_ADDR;
+		spi_mask = SYS_SPI_BT_WDAT_MASK;
+		spi_wdat = SYS_SPI_BT_WDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_BT | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_FM:
+		spi_busy =  1 << SYS_SPI_STA_FM_BUSY_SHFT;
+		spi_addr = SYS_SPI_FM_ADDR_ADDR;
+		spi_mask = SYS_SPI_FM_WDAT_MASK;
+		spi_wdat = SYS_SPI_FM_WDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_FM | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_TOP:
+		spi_busy =  1 << SYS_SPI_STA_TOP_BUSY_SHFT;
+		spi_addr = SYS_SPI_TOP_ADDR_ADDR;
+		spi_mask = SYS_SPI_TOP_WDAT_MASK;
+		spi_wdat = SYS_SPI_TOP_WDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_TOP | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	case SYS_SPI_WF1:
+		spi_busy =  1 << SYS_SPI_STA_WF_BUSY_SHFT;
+		spi_addr = SYS_SPI_WF_ADDR_ADDR;
+		spi_mask = SYS_SPI_WF_WDAT_MASK;
+		spi_wdat = SYS_SPI_WF_WDAT_ADDR;
+		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_WF1 | (addr & SYS_SPI_ADDR_CR_MASK);
+		break;
+	default:
+		return FM_SYS_SPI_ERR;
+	}
+
+	if (sys_spi_wait(spi_busy) == FM_SYS_SPI_BUSY)
+		return FM_SYS_SPI_BUSY;
+
+	si->spi_write(si, spi_addr, addr);
+	si->spi_write(si, spi_wdat, (data & spi_mask));
+
+	sys_spi_wait(spi_busy);
+
+	WCN_DBG(FM_DBG | CHIP, "[0x%08x]=[0x%08x]\n", addr, data);
+
+	return FM_SYS_SPI_OK;
+}
+#endif /* CFG_FM_CONNAC2 */
 
 static void drv_spi_read(
 	struct fm_spi_interface *si, unsigned int addr, unsigned int *val)
@@ -764,10 +930,14 @@ static void fm_task_rx_dispatcher(
 	fm_tx(event, 0xFFFF);
 }
 
-static unsigned int drv_set_own(void)
+static bool drv_set_own(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	unsigned int val, i;
+	bool ret = true;
+
+	if (FM_LOCK(fm_wcn_ops.own_lock))
+		return false;
 
 	si->host_write(si, 0x180601B0, 0x1);
 	si->host_read(si, 0x18001000, &val);
@@ -776,16 +946,24 @@ static unsigned int drv_set_own(void)
 		si->host_read(si, 0x18001000, &val);
 	}
 
-	return i != MAX_SET_OWN_COUNT;
+	ret = i != MAX_SET_OWN_COUNT;
+
+	/* unlock if set own fail */
+	if (!ret)
+		FM_UNLOCK(fm_wcn_ops.own_lock);
+
+	return ret;
 }
 
-static unsigned int drv_clr_own(void)
+static bool drv_clr_own(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 
 	si->host_write(si, 0x180601B0, 0x0);
 
-	return 1;
+	FM_UNLOCK(fm_wcn_ops.own_lock);
+
+	return true;
 }
 
 static int drv_stp_send_data(unsigned char *buf, unsigned int len)
@@ -823,6 +1001,20 @@ static int drv_stp_recv_data(unsigned char *buf, unsigned int len)
 	memcpy(buf, fm_wcn_ops.rx_buf, length);
 
 	return length;
+}
+
+static void drv_enable_eint(void)
+{
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
+
+	enable_irq(ei->irq_id);
+}
+
+static void drv_disable_eint(void)
+{
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
+
+	disable_irq_nosync(ei->irq_id);
 }
 
 static void drv_eint_handler(void)
@@ -928,15 +1120,20 @@ static int drv_interface_uninit(void)
 	return 0;
 }
 
+static unsigned char drv_get_top_index(void)
+{
+	return SYS_SPI_TOP;
+}
+
 #if CFG_FM_CONNAC2
 
-static int drv_stp_register_event_cb(void *cb)
+static int fm_conninfra_stp_register_event_cb(void *cb)
 {
 	fm_wcn_ops.ei.eint_cb = (void (*)(void))cb;
 	return 0;
 }
 
-static int drv_msgcb_reg(void *data)
+static int fm_conninfra_msgcb_reg(void *data)
 {
 	/* get whole chip reset cb */
 	whole_chip_reset = data;
@@ -944,17 +1141,65 @@ static int drv_msgcb_reg(void *data)
 		CONNDRV_TYPE_FM, &fm_drv_cbs);
 }
 
-static int drv_func_on(void)
+static int fm_conninfra_func_on(void)
 {
-	return conninfra_pwr_on(CONNDRV_TYPE_FM);
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	ret = conninfra_pwr_on(CONNDRV_TYPE_FM);
+	if (ret == -1) {
+		WCN_DBG(FM_ERR | CHIP, "conninfra power on fail.\n");
+		return 0;
+	}
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return 0;
+	}
+
+	ret = conninfra_adie_top_ck_en_on(CONNSYS_ADIE_CTL_HOST_FM);
+
+	if (si->clr_own)
+		si->clr_own();
+
+	if (ret == -1) {
+		WCN_DBG(FM_ERR | CHIP, "top ck en fail.\n");
+		return 0;
+	}
+
+	return 1;
 }
 
-static int drv_func_off(void)
+static int fm_conninfra_func_off(void)
 {
-	return conninfra_pwr_off(CONNDRV_TYPE_FM);
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return 0;
+	}
+
+	ret  = conninfra_adie_top_ck_en_off(CONNSYS_ADIE_CTL_HOST_FM);
+
+	if (si->clr_own)
+		si->clr_own();
+
+	if (ret == -1) {
+		WCN_DBG(FM_ERR | CHIP, "top ck en off fail.\n");
+		return 0;
+	}
+
+	ret = conninfra_pwr_off(CONNDRV_TYPE_FM);
+	if (ret == -1) {
+		WCN_DBG(FM_ERR | CHIP, "conninfra power off fail.\n");
+		return 0;
+	}
+
+	return 1;
 }
 
-static int drv_chipid_query(void)
+static int fm_conninfra_chipid_query(void)
 {
 #ifdef CFG_FM_CHIP_ID
 	return CFG_FM_CHIP_ID;
@@ -963,171 +1208,31 @@ static int drv_chipid_query(void)
 #endif
 }
 
-#else /* CFG_FM_CONNAC2 */
-
-static int sys_spi_wait(unsigned int spi_busy)
+static int fm_conninfra_spi_clock_switch(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
-	unsigned int spi_count, rdata;
+	int ret = 0;
 
-	/* It needs to prevent infinite loop */
-	for (spi_count = 0; spi_count < FM_SPI_COUNT_LIMIT; spi_count++) {
-		si->spi_read(si, SYS_SPI_STA, &rdata);
-		if ((rdata & spi_busy) == 0)
-			break;
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return 0;
 	}
-	if (spi_count == FM_SPI_COUNT_LIMIT) {
-		WCN_DBG(FM_WAR | CHIP,
-			"SPI busy[0x%08x], retry count reached maximum.\n",
-			rdata);
-		return SYS_SPI_BUSY;
+
+	ret = conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_64M);
+
+	if (si->clr_own)
+		si->clr_own();
+
+	if (ret == -1) {
+		WCN_DBG(FM_ERR | CHIP, "conninfra clock switch fail.\n");
+		return 0;
 	}
-	return SYS_SPI_OK;
+
+	return 1;
 }
 
-static int fm_sys_spi_read(
-	struct fm_spi_interface *si, unsigned int subsystem,
-	unsigned int addr, unsigned int *data)
-{
-	unsigned int spi_busy, spi_addr, spi_mask, spi_wdat, spi_rdat, rdata;
+#else /* CFG_FM_CONNAC2 */
 
-	if (!si->spi_read || !si->spi_write) {
-		WCN_DBG(FM_ERR | CHIP, "spi api is NULL.\n");
-		return SYS_SPI_ERR;
-	}
-
-	switch (subsystem) {
-	case SYS_SPI_WF:
-		spi_busy =  1 << SYS_SPI_STA_WF_BUSY_SHFT;
-		spi_addr = SYS_SPI_WF_ADDR_ADDR;
-		spi_mask = SYS_SPI_WF_RDAT_MASK;
-		spi_wdat = SYS_SPI_WF_WDAT_ADDR;
-		spi_rdat = SYS_SPI_WF_RDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_WF | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_BT:
-		spi_busy =  1 << SYS_SPI_STA_BT_BUSY_SHFT;
-		spi_addr = SYS_SPI_BT_ADDR_ADDR;
-		spi_mask = SYS_SPI_BT_RDAT_MASK;
-		spi_wdat = SYS_SPI_BT_WDAT_ADDR;
-		spi_rdat = SYS_SPI_BT_RDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_BT | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_FM:
-		spi_busy =  1 << SYS_SPI_STA_FM_BUSY_SHFT;
-		spi_addr = SYS_SPI_FM_ADDR_ADDR;
-		spi_mask = SYS_SPI_FM_RDAT_MASK;
-		spi_wdat = SYS_SPI_FM_WDAT_ADDR;
-		spi_rdat = SYS_SPI_FM_RDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_FM | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_GPS:
-		spi_busy =  1 << SYS_SPI_STA_GPS_BUSY_SHFT;
-		spi_addr = SYS_SPI_GPS_ADDR_ADDR;
-		spi_mask = SYS_SPI_GPS_RDAT_MASK;
-		spi_wdat = SYS_SPI_GPS_WDAT_ADDR;
-		spi_rdat = SYS_SPI_GPS_RDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_GPS | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_TOP:
-		spi_busy =  1 << SYS_SPI_STA_TOP_BUSY_SHFT;
-		spi_addr = SYS_SPI_TOP_ADDR_ADDR;
-		spi_mask = SYS_SPI_TOP_RDAT_MASK;
-		spi_wdat = SYS_SPI_TOP_WDAT_ADDR;
-		spi_rdat = SYS_SPI_TOP_RDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_TOP | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_WF1:
-		spi_busy =  1 << SYS_SPI_STA_WF_BUSY_SHFT;
-		spi_addr = SYS_SPI_WF_ADDR_ADDR;
-		spi_mask = SYS_SPI_WF_RDAT_MASK;
-		spi_wdat = SYS_SPI_WF_WDAT_ADDR;
-		spi_rdat = SYS_SPI_WF_RDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_READ | SYS_SPI_ADDR_CR_WF1 | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	default:
-		return SYS_SPI_ERR;
-	}
-
-	if (sys_spi_wait(spi_busy) == SYS_SPI_BUSY)
-		return SYS_SPI_BUSY;
-
-	si->spi_write(si, spi_addr, addr);
-	si->spi_write(si, spi_wdat, 0);
-
-	sys_spi_wait(spi_busy);
-
-	si->spi_read(si, spi_rdat, &rdata);
-	*data = rdata & spi_mask;
-
-	WCN_DBG(FM_DBG | CHIP, "[0x%08x]=[0x%08x]\n", addr, *data);
-
-	return SYS_SPI_OK;
-}
-
-static int fm_sys_spi_write(
-	struct fm_spi_interface *si, unsigned int subsystem,
-	unsigned int addr, unsigned int data)
-{
-	unsigned int spi_busy, spi_addr, spi_mask, spi_wdat;
-
-	if (!si->spi_read || !si->spi_write) {
-		WCN_DBG(FM_ERR | CHIP, "spi api is NULL.\n");
-		return SYS_SPI_ERR;
-	}
-
-	switch (subsystem) {
-	case SYS_SPI_WF:
-		spi_busy =  1 << SYS_SPI_STA_WF_BUSY_SHFT;
-		spi_addr = SYS_SPI_WF_ADDR_ADDR;
-		spi_mask = SYS_SPI_WF_WDAT_MASK;
-		spi_wdat = SYS_SPI_WF_WDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_WF | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_BT:
-		spi_busy =  1 << SYS_SPI_STA_BT_BUSY_SHFT;
-		spi_addr = SYS_SPI_BT_ADDR_ADDR;
-		spi_mask = SYS_SPI_BT_WDAT_MASK;
-		spi_wdat = SYS_SPI_BT_WDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_BT | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_FM:
-		spi_busy =  1 << SYS_SPI_STA_FM_BUSY_SHFT;
-		spi_addr = SYS_SPI_FM_ADDR_ADDR;
-		spi_mask = SYS_SPI_FM_WDAT_MASK;
-		spi_wdat = SYS_SPI_FM_WDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_FM | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_TOP:
-		spi_busy =  1 << SYS_SPI_STA_TOP_BUSY_SHFT;
-		spi_addr = SYS_SPI_TOP_ADDR_ADDR;
-		spi_mask = SYS_SPI_TOP_WDAT_MASK;
-		spi_wdat = SYS_SPI_TOP_WDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_TOP | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	case SYS_SPI_WF1:
-		spi_busy =  1 << SYS_SPI_STA_WF_BUSY_SHFT;
-		spi_addr = SYS_SPI_WF_ADDR_ADDR;
-		spi_mask = SYS_SPI_WF_WDAT_MASK;
-		spi_wdat = SYS_SPI_WF_WDAT_ADDR;
-		addr = SYS_SPI_ADDR_CR_WRITE | SYS_SPI_ADDR_CR_WF1 | (addr & SYS_SPI_ADDR_CR_MASK);
-		break;
-	default:
-		return SYS_SPI_ERR;
-	}
-
-	if (sys_spi_wait(spi_busy) == SYS_SPI_BUSY)
-		return SYS_SPI_BUSY;
-
-	si->spi_write(si, spi_addr, addr);
-	si->spi_write(si, spi_wdat, (data & spi_mask));
-
-	sys_spi_wait(spi_busy);
-
-	WCN_DBG(FM_DBG | CHIP, "[0x%08x]=[0x%08x]\n", addr, data);
-
-	return SYS_SPI_OK;
-}
 
 static int fm_stp_register_event_cb(void *cb)
 {
@@ -1171,12 +1276,15 @@ static irqreturn_t fm_isr(int irq, void *dev)
 		return IRQ_NONE;
 	}
 
+	if (ei->disable_eint)
+		ei->disable_eint();
+
 	ei->eint_cb();
 
 	return IRQ_HANDLED;
 }
 
-static int fm_register_irq(void)
+int fm_register_irq(struct platform_driver *drv)
 {
 #ifdef CONFIG_OF
 	struct device_node *node = NULL;
@@ -1184,6 +1292,7 @@ static int fm_register_irq(void)
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
 	int ret = 0;
 
+	ei->drv = drv;
 	ei->irq_id = FM_IRQ_NUMBER;
 #ifdef CONFIG_OF
 	node = of_find_compatible_node(NULL, NULL, "mediatek,fm");
@@ -1192,8 +1301,8 @@ static int fm_register_irq(void)
 	else
 		WCN_DBG(FM_ERR | CHIP, "get fm dts node fail\n");
 #endif
-	WCN_DBG(FM_ERR | CHIP, "request_irq num(%d)\n", ei->irq_id);
-	ret = request_irq(ei->irq_id, fm_isr, IRQF_SHARED, "fm", NULL);
+	WCN_DBG(FM_NTC | CHIP, "request_irq num(%d)\n", ei->irq_id);
+	ret = request_irq(ei->irq_id, fm_isr, IRQF_SHARED, FM_NAME, drv);
 	if (ret != 0)
 		WCN_DBG(FM_ERR | CHIP, "request_irq  ERROR(%d)\n", ret);
 
@@ -1208,32 +1317,40 @@ static void register_drv_ops_init(void)
 	ei->eint_handler = drv_eint_handler;
 	ei->stp_send_data = drv_stp_send_data;
 	ei->stp_recv_data = drv_stp_recv_data;
+	ei->get_top_index = drv_get_top_index;
 
 #if CFG_FM_CONNAC2
-	ei->stp_register_event_cb = drv_stp_register_event_cb;
-	ei->wmt_msgcb_reg = drv_msgcb_reg;
-	ei->wmt_func_on = drv_func_on;
-	ei->wmt_func_off = drv_func_off;
+	ei->enable_eint = drv_enable_eint;
+	ei->disable_eint = drv_disable_eint;
+	ei->stp_register_event_cb = fm_conninfra_stp_register_event_cb;
+	ei->wmt_msgcb_reg = fm_conninfra_msgcb_reg;
+	ei->wmt_func_on = fm_conninfra_func_on;
+	ei->wmt_func_off = fm_conninfra_func_off;
 	ei->wmt_ic_info_get = NULL;
-	ei->wmt_chipid_query = drv_chipid_query;
-
-	fm_register_irq();
+	ei->wmt_chipid_query = fm_conninfra_chipid_query;
+	ei->spi_clock_switch = fm_conninfra_spi_clock_switch;
 #else
+	ei->enable_eint = NULL;
+	ei->disable_eint = NULL;
 	ei->stp_register_event_cb = fm_stp_register_event_cb;
 	ei->wmt_msgcb_reg = fm_wmt_msgcb_reg;
 	ei->wmt_func_on = fm_wmt_func_on;
 	ei->wmt_func_off = fm_wmt_func_off;
 	ei->wmt_ic_info_get = fm_wmt_ic_info_get;
 	ei->wmt_chipid_query = fm_wmt_chipid_query;
+	ei->spi_clock_switch = NULL;
 #endif
 }
 
 static void register_drv_ops_uninit(void)
 {
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
+
+	if (ei->irq_id)
+		free_irq(ei->irq_id, ei->drv);
 	drv_interface_uninit();
 	fm_memset(&fm_wcn_ops, 0, sizeof(struct fm_wcn_reg_ops));
 }
-
 
 int fm_wcn_ops_register(void)
 {

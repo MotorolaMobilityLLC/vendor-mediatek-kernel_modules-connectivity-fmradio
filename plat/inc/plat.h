@@ -31,6 +31,7 @@
 #include "fm_rds.h"
 #include "fm_ext_api.h"
 #include "fm_reg_utils.h"
+#include "fm_main.h"
 
 #if CFG_FM_CONNAC2
 
@@ -54,13 +55,13 @@ enum {
 	SYS_SPI_MAX
 };
 
-enum {
-	SYS_SPI_OK = 0,
-	SYS_SPI_BUSY,
-	SYS_SPI_ERR
-};
-
 #endif /* CFG_FM_CONNAC2 */
+
+enum {
+	FM_SYS_SPI_OK = 0,
+	FM_SYS_SPI_BUSY,
+	FM_SYS_SPI_ERR
+};
 
 extern signed int fm_rds_parser(
 	struct rds_rx_t *rds_raw, signed int rds_size);

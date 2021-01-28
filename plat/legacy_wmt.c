@@ -108,6 +108,15 @@ static int fm_wmt_chipid_query(void)
 	return mtk_wcn_wmt_chipid_query();
 }
 
+static unsigned char drv_get_top_index(void)
+{
+	int chipid = fm_wmt_chipid_query();
+
+	if (chipid == 0x6779 || chipid == 0x6885)
+		return 5;
+	return 4;
+}
+
 void register_fw_ops_init(void)
 {
 	fm_wcn_ops.ei.eint_handler = fw_eint_handler;
@@ -119,10 +128,16 @@ void register_fw_ops_init(void)
 	fm_wcn_ops.ei.wmt_func_off = fm_wmt_func_off;
 	fm_wcn_ops.ei.wmt_ic_info_get = fm_wmt_ic_info_get;
 	fm_wcn_ops.ei.wmt_chipid_query = fm_wmt_chipid_query;
+	fm_wcn_ops.ei.get_top_index = drv_get_top_index;
 }
 
 void register_fw_ops_uninit(void)
 {
+}
+
+int fm_register_irq(struct platform_driver *drv)
+{
+	return 0;
 }
 
 int fm_wcn_ops_register(void)

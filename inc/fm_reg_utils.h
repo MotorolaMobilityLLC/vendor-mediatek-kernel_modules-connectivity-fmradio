@@ -23,7 +23,11 @@
 #include <fm_ext_api.h>
 
 /* SPI register address */
+#if CFG_FM_CONNAC2
+#define SYS_SPI_BASE_ADDR         (0x0000)
+#else
 #define SYS_SPI_BASE_ADDR         (0x6000)
+#endif
 #define SYS_SPI_STA               (0x00 + SYS_SPI_BASE_ADDR)
 #define SYS_SPI_CRTL              (0x04 + SYS_SPI_BASE_ADDR)
 #define SYS_SPI_DIV               (0x08 + SYS_SPI_BASE_ADDR)
@@ -342,8 +346,8 @@ struct fm_spi_interface {
 			    unsigned int addr, unsigned int *data);
 	int (*sys_spi_write)(struct fm_spi_interface *si, unsigned int subsystem,
 			     unsigned int addr, unsigned int data);
-	unsigned int (*set_own)(void);
-	unsigned int (*clr_own)(void);
+	bool (*set_own)(void);
+	bool (*clr_own)(void);
 };
 
 struct fm_wcn_reg_ops {
@@ -352,6 +356,7 @@ struct fm_wcn_reg_ops {
 	unsigned char rx_buf[FM_BUFFER_SIZE];
 	unsigned int rx_len;
 	struct fm_lock *tx_lock;
+	struct fm_lock *own_lock;
 };
 
 struct fm_full_cqi {

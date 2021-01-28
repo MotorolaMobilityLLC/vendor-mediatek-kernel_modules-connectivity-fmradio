@@ -14,6 +14,8 @@
 #ifndef FM_EXT_API_H
 #define FM_EXT_API_H
 
+#include <linux/platform_device.h>
+
 struct fm_ext_interface {
 	void (*eint_handler)(void);
 	void (*eint_cb)(void);
@@ -27,6 +29,10 @@ struct fm_ext_interface {
 	int (*wmt_func_off)(void);
 	int (*wmt_ic_info_get)(void);
 	int (*wmt_chipid_query)(void);
+	unsigned char (*get_top_index)(void);
+	int (*spi_clock_switch)(void);
+
+	struct platform_driver *drv;
 	unsigned int irq_id;
 };
 
