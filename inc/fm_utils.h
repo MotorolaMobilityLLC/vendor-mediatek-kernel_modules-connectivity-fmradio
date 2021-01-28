@@ -300,10 +300,10 @@ struct fm_work {
 	signed char name[FM_NAME_MAX + 1];
 	void *priv;
 
-	void (*work_func)(unsigned long data);
+	work_func_t work_func;
 	unsigned long data;
 	/* work methods */
-	signed int (*init)(struct fm_work *thiz, void (*work_func) (unsigned long data), unsigned long data);
+	signed int (*init)(struct fm_work *thiz, work_func_t work_func, unsigned long data);
 };
 
 extern struct fm_work *fm_work_create(const signed char *name);
