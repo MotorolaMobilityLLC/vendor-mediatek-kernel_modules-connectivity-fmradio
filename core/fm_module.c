@@ -76,11 +76,18 @@ static const struct file_operations fm_ops = {
 static ssize_t fm_proc_read(struct file *file, char __user *buf, size_t count, loff_t *ppos);
 static ssize_t fm_proc_write(struct file *file, const char *buffer, size_t count, loff_t *ppos);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
+static const struct proc_ops fm_proc_ops = {
+	.proc_read = fm_proc_read,
+	.proc_write = fm_proc_write,
+};
+#else
 static const struct file_operations fm_proc_ops = {
 	.owner = THIS_MODULE,
 	.read = fm_proc_read,
 	.write = fm_proc_write,
 };
+#endif
 
 #ifdef CONFIG_COMPAT
 static long fm_ops_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
