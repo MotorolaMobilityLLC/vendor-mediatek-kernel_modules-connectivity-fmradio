@@ -447,7 +447,7 @@ signed int fm_powerup(struct fm *fm, struct fm_tune_parm *parm)
 		ret = fm_powerdowntx(fm);
 		if (ret) {
 			WCN_DBG(FM_ERR | MAIN, "FM pwr down Tx fail!\n");
-			return ret;
+			goto out;
 		}
 	}
 
@@ -508,13 +508,13 @@ signed int fm_powerup_tx(struct fm *fm, struct fm_tune_parm *parm)
 	if (fm_pwr_state_get(fm) == FM_PWR_TX_ON) {
 		WCN_DBG(FM_NTC | MAIN, "already pwron!\n");
 		parm->err = FM_BADSTATUS;
-		goto out;
+		return ret;
 	} else if (fm_pwr_state_get(fm) == FM_PWR_RX_ON) {
 		/* if Rx is on, we need pwr down  first */
 		ret = fm_powerdown(fm, 0);
 		if (ret) {
 			WCN_DBG(FM_ERR | MAIN, "FM pwr down Rx fail!\n");
-			goto out;
+			return ret;
 		}
 	}
 
@@ -539,7 +539,6 @@ signed int fm_powerup_tx(struct fm *fm, struct fm_tune_parm *parm)
 	}
 	fm_cur_freq_set(parm->freq);
 
-out:
 	FM_UNLOCK(fm_ops_lock);
 	return ret;
 }
@@ -599,8 +598,11 @@ signed int fm_powerdown(struct fm *fm, int type)
 	} else {
 		if (FM_LOCK(fm_ops_lock))
 			return -FM_ELOCK;
-		if (FM_LOCK(fm_rxtx_lock))
+
+		if (FM_LOCK(fm_rxtx_lock)) {
+			FM_UNLOCK(fm_ops_lock);
 			return -FM_ELOCK;
+		}
 
 		ret = pwrdown_flow(fm);
 
@@ -1346,8 +1348,7 @@ signed int fm_rds_onoff(struct fm *fm, unsigned short rdson_off)
 	signed int ret = 0;
 
 	if (fm_pwr_state_get(fm) != FM_PWR_RX_ON) {
-		ret = -EPERM;
-		goto out;
+		return -EPERM;
 	}
 	if (fm_low_ops.ri.rds_onoff == NULL) {
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
