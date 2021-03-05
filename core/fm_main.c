@@ -2439,7 +2439,7 @@ struct fm *fm_dev_init(unsigned int arg)
 	gps_rtc_info.age = 0;
 	gps_rtc_info.drift = 0;
 	gps_rtc_info.tv.tv_sec = 0;
-	gps_rtc_info.tv.tv_usec = 0;
+	gps_rtc_info.tv.tv_nsec = 0;
 	gps_rtc_info.ageThd = FM_GPS_RTC_AGE_TH;
 	gps_rtc_info.driftThd = FM_GPS_RTC_DRIFT_TH;
 	gps_rtc_info.tvThd.tv_sec = FM_GPS_RTC_TIME_DIFF_TH;
