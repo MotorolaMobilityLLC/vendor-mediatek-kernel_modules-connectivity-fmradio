@@ -40,6 +40,9 @@
 
 #define FM_IRQ_NUMBER 0
 #define MAX_SET_OWN_COUNT    1000
+#define FM_POLLING_LIMIT     100
+
+unsigned int g_hw_id;
 
 #if CFG_FM_CONNAC2
 static int (*whole_chip_reset)(signed int sta);
@@ -918,11 +921,33 @@ static void fm_task_rx_dispatcher(
 	fm_tx(event, 0xFFFF);
 }
 
+static unsigned int fm_conninfra_hw_id(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int val = 0;
+
+	if (g_hw_id != 0x0)
+		return g_hw_id;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return -1;
+	}
+
+	drv_host_read(si, 0x18001000, &val);
+	g_hw_id = val >> 16;
+
+	if (si->clr_own)
+		si->clr_own();
+
+	return g_hw_id;
+}
+
 static bool drv_set_own(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
-	unsigned int val, tmp, i;
+	unsigned int val, hw_id, tmp1, tmp2, i;
 	int ret = 0;
 
 	ret = FM_LOCK(fm_wcn_ops.own_lock);
@@ -941,20 +966,25 @@ static bool drv_set_own(void)
 	drv_host_write(si, 0x180601B0, 0x1);
 
 	/* polling chipid */
-	drv_host_read(si, 0x18001000, &val);
-	for (i = 0; (val & 0xFFFF0000) != 0x20010000 && i < MAX_SET_OWN_COUNT; i++) {
-		fm_delayus(5000);
+	for (i = 0; i < MAX_SET_OWN_COUNT; i++) {
 		drv_host_read(si, 0x18001000, &val);
+		hw_id = val >> 16;
+		if (hw_id == 0x2001 || hw_id == 0x0206)
+			break;
+		fm_delayus(5000);
 	}
 
 	/* polling fail */
 	if (i == MAX_SET_OWN_COUNT) {
+		WCN_DBG(FM_ERR | CHIP,
+			"%s: invalid hw_id: %d!!!\n", __func__, val);
+
 		/* unlock if set own fail */
-		drv_host_read(si, 0x180601B0, &val);
-		drv_host_read(si, 0x18001808, &tmp);
+		drv_host_read(si, 0x180601B0, &tmp1);
+		drv_host_read(si, 0x18001808, &tmp2);
 		WCN_DBG(FM_ERR | CHIP,
 			"polling chip id fail [0x180601B0]=[0x%08x], [0x18001808]=[0x%08x]\n",
-			val, tmp);
+			tmp1, tmp2);
 		FM_UNLOCK(fm_wcn_ops.own_lock);
 		return false;
 	}
@@ -965,7 +995,9 @@ static bool drv_set_own(void)
 	}
 
 	/* conn_infra bus debug function setting */
-	conninfra_config_setup();
+	/* This is a software workaround for mt6885, mt6891 and mt6893 */
+	if (hw_id == 0x2001)
+		conninfra_config_setup();
 
 	return true;
 }
@@ -1023,43 +1055,98 @@ static int drv_spi_hopping(void)
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	int ret = 0, i = 0;
 	unsigned int val = 0;
+	unsigned int hw_id = 0;
+
+	/* must place before set_own to prevent clr_own before we do things */
+	hw_id = fm_conninfra_hw_id();
 
 	if (si->set_own && !si->set_own()) {
 		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
 		return -1;
 	}
 
-	/* enable 'rf_spi_div_en' */
-	drv_host_read(si, 0x18001A00, &val);
-	drv_host_write(si, 0x18001A00, val | (0x1 << 28));
+	if (hw_id == 0x2001) {
+		/* enable 'rf_spi_div_en' */
+		drv_host_read(si, 0x18001A00, &val);
+		drv_host_write(si, 0x18001A00, val | (0x1 << 28));
 
-	/* lock 64M */
-	drv_host_read(si, 0x18003004, &val);
-	drv_host_write(si, 0x18003004, val | (0x1 << 15));
+		/* lock 64M */
+		drv_host_read(si, 0x18003004, &val);
+		drv_host_write(si, 0x18003004, val | (0x1 << 15));
 
-	/*rd 0x18001810 until D1 == 1*/
-	for (i = 0; i < 100; i++) {
-		drv_host_read(si, 0x18001810, &val);
-		if (val & 0x00000002) {
-			WCN_DBG(FM_NTC | CHIP,
-				"%s: POLLING PLL_RDY success !\n", __func__);
-			/* switch SPI clock to 64MHz */
-			if (conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_64M) == -1) {
-				WCN_DBG(FM_ERR | CHIP,
-					"conninfra clock switch 64M fail.\n");
-				ret = -1;
+		/*rd 0x18001810 until D1 == 1*/
+		for (i = 0; i < FM_POLLING_LIMIT; i++) {
+			drv_host_read(si, 0x18001810, &val);
+			if (val & 0x00000002) {
+				WCN_DBG(FM_NTC | CHIP,
+					"%s: POLLING PLL_RDY success !\n", __func__);
+				/* switch SPI clock to 64MHz */
+				if (conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_64M) == -1) {
+					WCN_DBG(FM_ERR | CHIP,
+						"conninfra clock switch 64M fail.\n");
+					ret = -1;
+				}
+				break;
 			}
-			break;
+			fm_delayus(10);
 		}
-		fm_delayus(10);
-	}
+	} else if (hw_id == 0x0206) {
+		/* switch SPI clock to 64MHz */
+		if (conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_64M) == -1) {
+			WCN_DBG(FM_ERR | CHIP,
+				"conninfra clock switch 64M fail.\n");
+			ret = -1;
+		}
+	} else
+		WCN_DBG(FM_ERR | CHIP,
+			"%s: invalid hw_id: %d!!!\n", __func__, hw_id);
 
-	if (i == 100) {
+	if (i == FM_POLLING_LIMIT) {
 		ret = -1;
 		WCN_DBG(FM_ERR | CHIP,
 			"%s: Polling to read rd 0x18001810[1] ==0x1 failed !\n",
 			__func__);
 	}
+
+	if (si->clr_own)
+		si->clr_own();
+
+	return ret;
+}
+
+static int drv_disable_spi_hopping(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+	unsigned int val = 0;
+	unsigned int hw_id = 0;
+
+	/* must place before set_own to prevent clr_own before we do things */
+	hw_id = fm_conninfra_hw_id();
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return -1;
+	}
+
+	/* switch SPI clock to 26MHz */
+	if (conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_26M) == -1) {
+		WCN_DBG(FM_ERR | CHIP,
+			"conninfra clock switch 26M fail.\n");
+		ret = -1;
+	}
+
+	if (hw_id == 0x2001) {
+		/* unlock 64M */
+		drv_host_read(si, 0x18003004, &val);
+		drv_host_write(si, 0x18003004, val & (~(0x1 << 15)));
+
+		/* disable 'rf_spi_div_en' */
+		drv_host_read(si, 0x18001A00, &val);
+		drv_host_write(si, 0x18001A00, val | (0x1 << 28));
+	} else if (hw_id != 0x0206)
+		WCN_DBG(FM_ERR | CHIP,
+			"%s: invalid hw_id: %d!!!\n", __func__, hw_id);
 
 	if (si->clr_own)
 		si->clr_own();
@@ -1113,6 +1200,7 @@ static int drv_interface_init(void)
 	struct fm_spi_interface *interface = &fm_wcn_ops.si;
 	struct fm_wcn_reg_info *info = &interface->info;
 
+	g_hw_id = 0x0;
 	info->spi_phy_addr = TOP_RF_SPI_AON_ADDR;
 	info->spi_size = TOP_RF_SPI_AON_SIZE;
 	request_mem_region(info->spi_phy_addr, info->spi_size, "FM_SPI");
@@ -1215,10 +1303,41 @@ static int fm_conninfra_msgcb_reg(void *data)
 		CONNDRV_TYPE_FM, &fm_drv_cbs);
 }
 
+static int fm_conninfra_set_reg_top_ck_en(unsigned int val)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+	int i = 0;
+	int tem = 0;
+	int check = 0;
+
+	/* set 'reg_top_ck_en_4' to initial Power and Clock in A-DIE chip  before FM power on */
+	drv_host_read(si, 0x18005130, &tem);
+	tem = ((tem & 0xFFFFFFFE) | val);
+	drv_host_write(si, 0x18005130, tem);
+
+	/* polling initial command done */
+	for (i = 0; i < FM_POLLING_LIMIT; i++) {
+		fm_delayus(5000);
+		drv_host_read(si, 0x18005130, &tem);
+		check = (tem & 0x2) >> 1;
+		WCN_DBG(FM_NTC | CHIP, "%s, 0x18005130[1]:%d\n", __func__,
+			check);
+		if (check == 0x0)
+			break;
+	}
+
+	if (i == FM_POLLING_LIMIT)
+		ret = -1;
+
+	return ret;
+}
+
 static int fm_conninfra_func_on(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	int ret = 0;
+	unsigned int hw_id = 0;
 
 	ret = conninfra_pwr_on(CONNDRV_TYPE_FM);
 	if (ret == -1) {
@@ -1226,12 +1345,21 @@ static int fm_conninfra_func_on(void)
 		return 0;
 	}
 
+	/* must place before set_own to prevent clr_own before we do things */
+	hw_id = fm_conninfra_hw_id();
+
 	if (si->set_own && !si->set_own()) {
 		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
 		return 0;
 	}
 
-	ret = conninfra_adie_top_ck_en_on(CONNSYS_ADIE_CTL_HOST_FM);
+	if (hw_id == 0x2001)
+		ret = conninfra_adie_top_ck_en_on(CONNSYS_ADIE_CTL_HOST_FM); /* set top_ck_en_adie */
+	else if (hw_id == 0x0206)
+		ret = fm_conninfra_set_reg_top_ck_en(0x1);
+	else
+		WCN_DBG(FM_ERR | CHIP,
+			"%s: invalid hw_id: %d!!!\n", __func__, hw_id);
 
 	if (si->clr_own)
 		si->clr_own();
@@ -1248,13 +1376,23 @@ static int fm_conninfra_func_off(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	int ret = 0;
+	unsigned int hw_id = 0;
+
+	/* must place before set_own to prevent clr_own before we do things */
+	hw_id = fm_conninfra_hw_id();
 
 	if (si->set_own && !si->set_own()) {
 		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
 		return 0;
 	}
 
-	ret  = conninfra_adie_top_ck_en_off(CONNSYS_ADIE_CTL_HOST_FM);
+	if (hw_id == 0x2001)
+		ret = conninfra_adie_top_ck_en_off(CONNSYS_ADIE_CTL_HOST_FM); /* clear top_clk_en_adie */
+	else if (hw_id == 0x0206)
+		ret = fm_conninfra_set_reg_top_ck_en(0x0);
+	else
+		WCN_DBG(FM_ERR | CHIP,
+			"%s: invalid hw_id: %d!!!\n", __func__, hw_id);
 
 	if (si->clr_own)
 		si->clr_own();
@@ -1463,6 +1601,8 @@ static void register_drv_ops_init(void)
 	ei->spi_clock_switch = fm_conninfra_spi_clock_switch;
 	ei->is_bus_hang = fm_conninfra_is_bus_hang;
 	ei->spi_hopping = drv_spi_hopping;
+	ei->disable_spi_hopping = drv_disable_spi_hopping;
+	ei->get_conninfra_hw_id = fm_conninfra_hw_id;
 #else
 	ei->enable_eint = NULL;
 	ei->disable_eint = NULL;
@@ -1475,6 +1615,8 @@ static void register_drv_ops_init(void)
 	ei->spi_clock_switch = fm_wmt_spi_clock_switch;
 	ei->is_bus_hang = NULL;
 	ei->spi_hopping = NULL;
+	ei->disable_spi_hopping = NULL;
+	ei->get_conninfra_hw_id = NULL;
 #endif
 	ei->low_ops_register = mt6635_fm_low_ops_register;
 	ei->rds_ops_unregister = mt6635_fm_rds_ops_unregister;
