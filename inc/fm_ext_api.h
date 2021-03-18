@@ -43,6 +43,8 @@ struct fm_ext_interface {
 	int (*spi_clock_switch)(enum fm_spi_speed speed);
 	bool (*is_bus_hang)(void);
 	int (*spi_hopping)(void);
+	int (*disable_spi_hopping)(void);
+	unsigned int (*get_conninfra_hw_id)(void);
 	signed int (*low_ops_register)(struct fm_callback *cb, struct fm_basic_interface *bi);
 	signed int (*low_ops_unregister)(struct fm_basic_interface *bi);
 	signed int (*rds_ops_register)(struct fm_basic_interface *bi, struct fm_rds_interface *ri);
