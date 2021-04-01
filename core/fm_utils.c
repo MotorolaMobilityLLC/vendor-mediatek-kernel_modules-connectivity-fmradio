@@ -402,6 +402,11 @@ static signed int fm_timer_init(struct fm_timer *thiz, void (*timeout) (unsigned
 {
 	struct timer_list *timerlist = (struct timer_list *)thiz->priv;
 
+	if (thiz->flag & FM_TIMER_FLAG_ACTIVATED) {
+		thiz->flag &= ~FM_TIMER_FLAG_ACTIVATED;
+		del_timer_sync(timerlist);
+	}
+
 	thiz->flag = flag;
 	thiz->flag &= ~FM_TIMER_FLAG_ACTIVATED;
 	thiz->timeout_func = timeout;
@@ -446,8 +451,10 @@ static signed int fm_timer_stop(struct fm_timer *thiz)
 {
 	struct timer_list *timerlist = (struct timer_list *)thiz->priv;
 
-	thiz->flag &= ~FM_TIMER_FLAG_ACTIVATED;
-	del_timer(timerlist);
+	if (thiz->flag & FM_TIMER_FLAG_ACTIVATED) {
+		thiz->flag &= ~FM_TIMER_FLAG_ACTIVATED;
+		del_timer_sync(timerlist);
+	}
 
 	return 0;
 }
@@ -479,6 +486,7 @@ struct fm_timer *fm_timer_create(const signed char *name)
 	fm_memcpy(tmp->name, name, (strlen(name) > FM_NAME_MAX) ? (FM_NAME_MAX) : (strlen(name)));
 	tmp->priv = timerlist;
 	tmp->ref = 0;
+	tmp->flag = 0;
 	tmp->init = fm_timer_init;
 	tmp->start = fm_timer_start;
 	tmp->stop = fm_timer_stop;
