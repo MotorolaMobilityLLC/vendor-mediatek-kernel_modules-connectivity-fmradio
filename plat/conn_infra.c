@@ -639,7 +639,7 @@ static void fm_softmute_tune(unsigned short freq, unsigned char *pos)
 	/* clear soft mute tune */
 	fw_bop_modify(FM_MAIN_CG2_CTRL, 0xBFFF, 0x0000);
 
-	WCN_DBG(FM_NTC | CHIP,
+	WCN_DBG(FM_DBG | CHIP,
 		"freq %d, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x, 0x%04x\n",
 		p_cqi->ch, p_cqi->rssi, p_cqi->pamd,
 		p_cqi->pr, p_cqi->fpamd, p_cqi->mr,
