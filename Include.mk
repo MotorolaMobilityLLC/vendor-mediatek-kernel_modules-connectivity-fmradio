@@ -7,13 +7,8 @@ $(info FM_CHIP = $(FM_CHIP))
 $(info FM_CHIP_ID = $(FM_CHIP_ID))
 $(info BUILD_CONNAC2 = $(BUILD_CONNAC2))
 
-ifeq ($(FM_LAYERDEC_2),)
-    LOCAL_INIT_RC := init.fmradio_drv_ld1.rc
-    MODULE_NAME := fmradio_drv
-else
-    MODULE_NAME := fmradio_drv_$(FM_PLAT)
-    LOCAL_INIT_RC := init.fmradio_drv_ld2.rc
-endif
+MODULE_NAME := fmradio_drv_$(FM_PLAT)
+LOCAL_INIT_RC := init.fmradio_drv.rc
 LOCAL_MODULE := $(MODULE_NAME).ko
 LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_OWNER := mtk
