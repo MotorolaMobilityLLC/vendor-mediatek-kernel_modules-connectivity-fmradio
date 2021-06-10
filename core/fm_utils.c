@@ -429,8 +429,11 @@ static signed int fm_timer_start(struct fm_timer *thiz)
 {
 	struct timer_list *timerlist = (struct timer_list *)thiz->priv;
 
-	thiz->flag |= FM_TIMER_FLAG_ACTIVATED;
-	mod_timer(timerlist, jiffies + (thiz->timeout_ms) / (1000 / HZ));
+	if (!(thiz->flag & FM_TIMER_FLAG_ACTIVATED)) {
+		thiz->flag |= FM_TIMER_FLAG_ACTIVATED;
+		timerlist->expires = jiffies + (thiz->timeout_ms) / (1000 / HZ);
+		add_timer(timerlist);
+	}
 
 	return 0;
 }
