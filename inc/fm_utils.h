@@ -287,6 +287,7 @@ struct fm_timer {
 	unsigned char tx_pwr_ctrl_en;
 	unsigned char tx_rtc_ctrl_en;
 	unsigned char tx_desense_en;
+	struct fm_lock *lock;
 
 	/* timer methods */
 #if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
