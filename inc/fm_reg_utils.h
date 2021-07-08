@@ -173,7 +173,8 @@ enum {
 	FM_WRITE_SPI_BASIC_OP = (FM_BOP_BASE + 0x05),
 	FM_RD_SPI_UNTIL_BASIC_OP = (FM_BOP_BASE + 0x06),
 	FM_MODIFY_SPI_BASIC_OP = (FM_BOP_BASE + 0x07),
-	FM_MAX_BASIC_OP = (FM_BOP_BASE + 0x08)
+	FM_COPY_BY_MASK_BASIC_OP = (FM_BOP_BASE + 0x08),
+	FM_MAX_BASIC_OP = (FM_BOP_BASE + 0x09)
 };
 
 /* FM SPI control registers */
@@ -379,6 +380,8 @@ void fw_spi_write(unsigned char addr, unsigned short data);
 void fw_bop_udelay(unsigned int usec);
 void fw_bop_rd_until(unsigned char addr, unsigned short mask,
 		     unsigned short value);
+void fw_bop_copy_by_mask(unsigned char src, unsigned char dst,
+		     unsigned short mask_and);
 void fw_bop_modify(unsigned char addr, unsigned short mask_and,
 		   unsigned short mask_or);
 void fw_bop_spi_rd_until(unsigned char subsys, unsigned short addr,
