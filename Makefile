@@ -115,9 +115,13 @@ else
     FM_CHIP_PATH := $(FM_CHIP)/pub/$(FM_CHIP)
     ccflags-y += -I$(src)/chips/$(FM_CHIP)/inc
 
-    $(FM_CHIP)-objs += chips/$(FM_CHIP_PATH)_fm_rds.o
     ifneq ($(CFG_BUILD_CONNAC2), true)
+        $(FM_CHIP)-objs += chips/$(FM_CHIP_PATH)_fm_rds.o
         $(FM_CHIP)-objs += chips/$(FM_CHIP_PATH)_fm_lib.o
+    else
+        $(FM_CHIP)-objs += chips/mt6635/pub/mt6635_fm_rds.o
+        $(FM_CHIP)-objs += chips/connac2x/pub/connac2x_fm_lib.o
+        ccflags-y += -DFM_DTS_PROBE
     endif
 endif
 
@@ -141,7 +145,6 @@ ifeq ($(CFG_BUILD_CONNAC2), true)
 
     ccflags-y += -I$(CONNINFRA_SRC_FOLDER)/include
     ccflags-y += -DCFG_FM_CONNAC2=1
-    $(FM_CHIP)-objs += chips/mt6635/pub/mt6635_2_fm_lib.o
     $(FM_CHIP)-objs += plat/conn_infra.o
 else
     WMT_SRC_FOLDER := $(TOP)/vendor/mediatek/kernel_modules/connectivity/common
