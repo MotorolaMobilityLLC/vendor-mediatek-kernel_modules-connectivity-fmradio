@@ -56,7 +56,7 @@ ifeq ($(strip $(MTK_FM_SUPPORT)), yes)
         # mt6635 connac 2.x
         BUILD_CONNAC2 := true
         FM_CHIP := mt6635
-        FM_PLAT := mt6635_c2
+        FM_PLAT := connac2x
         include $(MAIN_PATH)/Include.mk
     endif
 endif
