@@ -1460,23 +1460,24 @@ static int fm_conninfra_msgcb_reg(void *data)
 static int fm_conninfra_set_reg_top_ck_en(unsigned int val)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
 	int ret = 0;
 	int i = 0;
 	unsigned int tem = 0;
 	int check = 0;
 
 	/* set 'reg_top_ck_en_4' to initial Power and Clock in A-DIE chip  before FM power on */
-	drv_host_read(si, 0x18005130, &tem);
+	drv_host_read(si, ei->reg_map[WB_SLP_TOP_CK_4], &tem);
 	tem = ((tem & 0xFFFFFFFE) | val);
-	drv_host_write(si, 0x18005130, tem);
+	drv_host_write(si, ei->reg_map[WB_SLP_TOP_CK_4], tem);
 
 	/* polling initial command done */
 	for (i = 0; i < FM_POLLING_LIMIT; i++) {
 		fm_delayus(5000);
-		drv_host_read(si, 0x18005130, &tem);
+		drv_host_read(si, ei->reg_map[WB_SLP_TOP_CK_4], &tem);
 		check = (tem & 0x2) >> 1;
-		WCN_DBG(FM_NTC | CHIP, "%s, 0x18005130[1]:%d\n", __func__,
-			check);
+		WCN_DBG(FM_NTC | CHIP, "%s, 0x%08x[1]:%d\n", __func__,
+			ei->reg_map[WB_SLP_TOP_CK_4], check);
 		if (check == 0x0)
 			break;
 	}
@@ -1491,7 +1492,6 @@ static int fm_conninfra_func_on(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
-	unsigned int tem = 0;
 	int ret = 0;
 
 	ret = conninfra_pwr_on(CONNDRV_TYPE_FM);
@@ -1509,14 +1509,9 @@ static int fm_conninfra_func_on(void)
 		/* set top_ck_en_adie */
 		ret = conninfra_adie_top_ck_en_on(
 			CONNSYS_ADIE_CTL_HOST_FM);
-	} else if (ei->family_id == 0x6877)
+	} else if (ei->family_id == 0x6877 || ei->family_id == 0x6983)
 		ret = fm_conninfra_set_reg_top_ck_en(0x1);
-	else if (ei->family_id == 0x6983) {
-		/* wr 0x18001010[1:0]=2'b11 */
-		drv_host_read(si, ei->reg_map[ADIE_CTL], &tem);
-		tem |= 0x3;
-		drv_host_write(si, ei->reg_map[ADIE_CTL], tem);
-	} else {
+	else {
 		WCN_DBG(FM_ERR | CHIP,
 			"%s: invalid family_id:0x%04x!!!\n",
 			__func__, ei->family_id);
@@ -1537,7 +1532,6 @@ static int fm_conninfra_func_off(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
-	unsigned int tem = 0;
 	int ret = 0;
 
 	if (si->set_own && !si->set_own()) {
@@ -1549,14 +1543,9 @@ static int fm_conninfra_func_off(void)
 		/* clear top_clk_en_adie */
 		ret = conninfra_adie_top_ck_en_off(
 			CONNSYS_ADIE_CTL_HOST_FM);
-	} else if (ei->family_id == 0x6877)
+	} else if (ei->family_id == 0x6877 || ei->family_id == 0x6983)
 		ret = fm_conninfra_set_reg_top_ck_en(0x0);
-	else if (ei->family_id == 0x6983) {
-		/* wr 0x18001010[1] = 1'b0 */
-		drv_host_read(si, ei->reg_map[ADIE_CTL], &tem);
-		tem &= 0xFFFFFFFD;
-		drv_host_write(si, ei->reg_map[ADIE_CTL], tem);
-	} else {
+	else {
 		WCN_DBG(FM_ERR | CHIP,
 			"%s: invalid family_id:0x%04x!!!\n",
 			__func__, ei->family_id);
@@ -1820,6 +1809,9 @@ int fm_register_plat(unsigned int family_id, unsigned int conn_id)
 		/* conn_infra_rgu */
 		ei->reg_map[FM_CTRL_MEM_SWCTL_PDN]	= 0x18000098; /*!*/
 
+		/* conn_wt_slp_ctl_reg */
+		ei->reg_map[WB_SLP_TOP_CK_4]		= 0x18005130;
+
 		/* conn_rf_spi_mst_reg */
 		ei->reg_map[SPI_CRTL] =
 			ei->base_addr[CONN_RF_SPI_MST_REG] + 0x004;
@@ -1853,6 +1845,9 @@ int fm_register_plat(unsigned int family_id, unsigned int conn_id)
 
 		/* conn_infra_rgu */
 		ei->reg_map[FM_CTRL_MEM_SWCTL_PDN]	= 0x18000098;
+
+		/* conn_wt_slp_ctl_reg */
+		ei->reg_map[WB_SLP_TOP_CK_4]		= 0x18003130;
 
 		/* conn_rf_spi_mst_reg */
 		ei->reg_map[SPI_CRTL] =
