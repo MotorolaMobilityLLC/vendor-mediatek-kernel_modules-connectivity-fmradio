@@ -2009,7 +2009,7 @@ static bool connac2x_TDD_chan_check(unsigned short freq)
 
 	i = (freq_tmp - 6500) / 5;
 	if ((i / 4) >= array_size) {
-		WCN_DBG(FM_ERR | CHIP, "Freq index out of range(%d),max(%zd)\n",
+		WCN_DBG(FM_ERR | CHIP, "Freq index out of range(%d),max(%d)\n",
 			i / 4, array_size);
 		return false;
 	}
