@@ -85,7 +85,8 @@ signed int fm_file_read(const signed char *filename, unsigned char *dst, signed 
 
 	k = kthread_run(file_read_thread, (void *)data, "file_read_thread");
 	if (IS_ERR(k)) {
-		WCN_DBG(FM_NTC | CHIP, "%s error ret:%d\n", __func__, PTR_ERR(k));
+		WCN_DBG(FM_NTC | CHIP, "%s error ret:%ld\n", __func__,
+			PTR_ERR(k));
 		data->ret = -FM_EPATCH;
 	} else
 		wait_for_completion(&data->comp);

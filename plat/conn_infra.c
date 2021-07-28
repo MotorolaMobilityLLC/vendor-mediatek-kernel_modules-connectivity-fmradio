@@ -1236,7 +1236,7 @@ static int drv_spi_hopping(void)
 		ret = -1;
 		WCN_DBG(FM_ERR | CHIP,
 			"%s: Polling to read rd 0x%08x[1]==0x1 failed !\n",
-			ei->reg_map[PLL_STATUS], __func__);
+			__func__, ei->reg_map[PLL_STATUS]);
 	}
 
 	if (si->clr_own)
@@ -1347,7 +1347,7 @@ static int drv_do_ioremap(void)
 		WCN_DBG(FM_ERR | CHIP, "[FM_SPI] Cannot remap address.\n");
 		return -1;
 	} else {
-		WCN_DBG(FM_NTC | CHIP, "[FM_SPI] 0x%08x:0x%08x\n",
+		WCN_DBG(FM_NTC | CHIP, "[FM_SPI] 0x%llx:0x%08x\n",
 			info->spi_phy_addr, info->spi_size);
 	}
 
@@ -1360,7 +1360,7 @@ static int drv_do_ioremap(void)
 		WCN_DBG(FM_ERR | CHIP, "[FM_TOP] Cannot remap address.\n");
 		return -1;
 	} else {
-		WCN_DBG(FM_NTC | CHIP, "[FM_TOP] 0x%08x:0x%08x\n",
+		WCN_DBG(FM_NTC | CHIP, "[FM_TOP] 0x%llx:0x%08x\n",
 			info->top_phy_addr, info->top_size);
 	}
 
@@ -1373,7 +1373,7 @@ static int drv_do_ioremap(void)
 		WCN_DBG(FM_ERR | CHIP, "[FM_MCU] Cannot remap address.\n");
 		return -1;
 	} else {
-		WCN_DBG(FM_NTC | CHIP, "[FM_MCU] 0x%08x:0x%08x\n",
+		WCN_DBG(FM_NTC | CHIP, "[FM_MCU] 0x%llx:0x%08x\n",
 			info->mcu_phy_addr, info->mcu_size);
 	}
 
