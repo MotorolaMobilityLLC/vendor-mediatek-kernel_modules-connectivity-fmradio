@@ -1197,7 +1197,7 @@ static signed int mt6631_PowerDown(void)
 	mt6631_do_SPI_hopping_26M();
 
 	/* Enable 26M crystal sleep */
-	if (hwid >= FM_CONNAC_1_0 && hwid <= FM_CONNAC_1_2) {
+	if (hwid >= FM_CONNAC_1_0) {
 		WCN_DBG(FM_DBG | CHIP, "PowerDown: Enable 26M crystal sleep,Set 0x81021200[23] = 0x0\n");
 		fm_host_reg_read(0x81021200, &tem);   /* Set 0x81021200[23] = 0x0 */
 		tem = tem & 0xFF7FFFFF;
