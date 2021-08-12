@@ -493,12 +493,6 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				goto out;
 			}
 
-			if (fm->chipon == false || fm_pwr_state_get(fm) == FM_PWR_OFF) {
-				WCN_DBG(FM_ERR | MAIN, "ERROR, FM chip is OFF\n");
-				ret = -EFAULT;
-				goto out;
-			}
-
 			if (copy_from_user(&parm_ctl, (void *)arg, sizeof(struct fm_top_rw_parm))) {
 				WCN_DBG(FM_ALT | MAIN, "copy from user error\n");
 				ret = -EFAULT;
@@ -536,12 +530,6 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 			if (g_dbg_level != 0xfffffff7) {
 				WCN_DBG(FM_ERR | MAIN, "Not support FM_IOCTL_HOST_RDWR\n");
-				ret = -EFAULT;
-				goto out;
-			}
-
-			if (fm->chipon == false || fm_pwr_state_get(fm) == FM_PWR_OFF) {
-				WCN_DBG(FM_ERR | MAIN, "ERROR, FM chip is OFF\n");
 				ret = -EFAULT;
 				goto out;
 			}
