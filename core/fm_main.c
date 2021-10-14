@@ -22,6 +22,9 @@
 /* #include "fm_cust_cfg.h" */
 #include "fm_cmd.h"
 
+/* fm self reset flag */
+static bool g_fm_trigger_rst;
+
 /* fm main data structure */
 static struct fm *g_fm_struct;
 /* we must get low level interface first, when add a new chip, the main effort is this interface */
@@ -255,6 +258,8 @@ signed int fm_subsys_reset(struct fm *fm)
 		WCN_DBG(FM_ERR | MAIN, "%s,invalid pointer\n", __func__);
 		return -FM_EPARA;
 	}
+
+	g_fm_trigger_rst = true;
 	fm->timer_wkthd->add_work(fm->timer_wkthd, fm->rst_wk);
 
 out:
@@ -2165,9 +2170,11 @@ void fm_cqi_check_work_func(struct work_struct *work)
 
 void fm_subsys_reset_work_func(struct work_struct *work)
 {
-	g_dbg_level = 0xffffffff;
 	if (FM_LOCK(fm_ops_lock))
 		return;
+
+	if (g_fm_trigger_rst == true)
+		g_dbg_level = 0xffffffff;
 
 	fm_sys_state_set(g_fm_struct, FM_SUBSYS_RST_START);
 
@@ -2239,7 +2246,11 @@ out:
 	g_fm_struct->wholechiprst = true;
 
 	FM_UNLOCK(fm_ops_lock);
-	g_dbg_level = 0xfffffff5;
+
+	if (g_fm_trigger_rst == true) {
+		g_dbg_level = 0xfffffff5;
+		g_fm_trigger_rst = false;
+	}
 }
 
 void fm_pwroff_work_func(struct work_struct *work)
