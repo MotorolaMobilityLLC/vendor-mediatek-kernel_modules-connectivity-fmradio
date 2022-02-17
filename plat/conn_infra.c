@@ -1022,6 +1022,11 @@ static void drv_host_reg_dump(void)
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
 	unsigned int host_reg[3] = {0};
 
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return;
+	}
+
 	drv_host_read(si, ei->reg_map[FM_CTRL], &host_reg[0]);
 	drv_host_read(si, ei->reg_map[ADIE_CTL], &host_reg[1]);
 	drv_host_read(si, ei->reg_map[CONN_TCR_CKMCTL], &host_reg[2]);
@@ -1031,6 +1036,9 @@ static void drv_host_reg_dump(void)
 		ei->reg_map[FM_CTRL], host_reg[0],
 		ei->reg_map[ADIE_CTL], host_reg[1],
 		ei->reg_map[CONN_TCR_CKMCTL], host_reg[2]);
+
+	if (si->clr_own)
+		si->clr_own();
 }
 
 static int drv_host_pre_on(void)
