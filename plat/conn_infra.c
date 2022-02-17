@@ -938,6 +938,24 @@ static bool drv_set_own(void)
 		fm_delayus(5000);
 	}
 
+	if (ei->family_id == 0x6983) {
+		/* polling conninfra_ready */
+		for (i = 0; i < MAX_SET_OWN_COUNT; i++) {
+			drv_host_read(si, ei->reg_map[CONN_INFRA_CFG_PWRCTRL1], &val);
+			if ((val & 0x10000) == 0x10000)
+				break;
+			fm_delayus(5000);
+		}
+
+		if (i == MAX_SET_OWN_COUNT) {
+			WCN_DBG(FM_ERR | CHIP,
+				"%s: conninfra_ready fail!!! 0x%08x:0x%08x\n",
+				__func__,
+				ei->reg_map[CONN_INFRA_CFG_PWRCTRL1], val);
+			return false;
+		}
+	}
+
 	/* polling fail */
 	if (i == MAX_SET_OWN_COUNT) {
 		WCN_DBG(FM_ERR | CHIP,
@@ -1217,7 +1235,7 @@ static int drv_spi_hopping(void)
 			}
 			fm_delayus(10);
 		}
-	} else if (ei->family_id == 0x6877) {
+	} else if (ei->family_id == 0x6877 || ei->family_id == 0x6983) {
 		/* TODO: add 0x6983 */
 		/* switch SPI clock to 64MHz */
 		if (conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_64M)
@@ -1274,11 +1292,9 @@ static int drv_disable_spi_hopping(void)
 		drv_host_read(si, ei->reg_map[CKGEN_BUS], &val);
 		drv_host_write(si, ei->reg_map[CKGEN_BUS],
 				val | (0x1 << 28));
-	} else if (ei->family_id == 0x6877) {
+	} else if (ei->family_id == 0x6877 || ei->family_id == 0x6983) {
 		/* no need to do anything */
 		/* conninfra do the spi hopping control */
-	} else if (ei->family_id == 0x6983) {
-		/* TODO */
 	} else {
 		WCN_DBG(FM_ERR | CHIP,
 			"%s: invalid family_id:0x%04x!!!\n",
@@ -1835,13 +1851,16 @@ int fm_register_plat(unsigned int family_id, unsigned int conn_id)
 		ei->reg_map[CONN_INFRA_WAKEPU_FM] =
 			ei->base_addr[CONN_HOST_CSR_TOP] + 0x1B0;
 
-		/* conn_infra_cfg_on */
+		/* conn_infra_cfg */
 		ei->reg_map[CONN_HW_VER]		= 0x18011000; /*!*/
+
+		/* conn_infra_cfg_on */
 		ei->reg_map[OSC_MASK]			= 0x18001308;
 		/* replace CONN_TCR_CKMCTL */
 		ei->reg_map[CONN_INFRA_CFG_FM_PWRCTRL0]	= 0x18001204; /*!*/
 		ei->reg_map[CONN_INFRA_CFG_RC_STATUS]	= 0x18001344; /*!*/
 		ei->reg_map[ADIE_CTL]			= 0x18001010; /*!*/
+		ei->reg_map[CONN_INFRA_CFG_PWRCTRL1]	= 0x18001210; /*!*/
 
 		/* conn_infra_rgu */
 		ei->reg_map[FM_CTRL_MEM_SWCTL_PDN]	= 0x18000098;
