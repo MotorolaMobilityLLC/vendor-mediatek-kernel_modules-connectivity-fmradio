@@ -1585,7 +1585,8 @@ static signed int mt_fm_probe(struct platform_device *pdev)
 	dev = &pdev->dev;
 	if (dev->of_node) {
 		WCN_DBG(FM_NTC | MAIN, "current compatible:%s",
-			of_get_property(dev->of_node, "compatible", NULL));
+				(char *) of_get_property(dev->of_node,
+						"compatible", NULL));
 
 		/* get family id */
 		ret = of_property_read_u32(dev->of_node, "family-id",
