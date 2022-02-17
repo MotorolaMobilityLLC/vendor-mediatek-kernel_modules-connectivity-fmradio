@@ -34,7 +34,6 @@ static struct fm_lock *fm_read_lock;
 /* for get rds block counter */
 static struct fm_lock *fm_rds_cnt;
 /* mutex for fm timer, RDS reset */
-static struct fm_lock *fm_timer_lock;
 static struct fm_lock *fm_rxtx_lock;	/* protect FM RX TX mode switch */
 static struct fm_lock *fm_rtc_mutex;	/* protect FM GPS RTC drift info */
 
@@ -473,12 +472,9 @@ signed int fm_powerup(struct fm *fm, struct fm_tune_parm *parm)
 	/* fm_low_ops.bi.volset(0); */
 	fm->vol = 15;
 	if (fm_low_ops.ri.rds_bci_get) {
-		if (!FM_LOCK(fm_timer_lock)) {
-			fm_timer_sys->init(fm_timer_sys, fm_timer_func, (unsigned long)g_fm_struct,
-					   fm_low_ops.ri.rds_bci_get(), 0);
-			fm_timer_sys->start(fm_timer_sys);
-			FM_UNLOCK(fm_timer_lock);
-		}
+		fm_timer_sys->init(fm_timer_sys, fm_timer_func, (unsigned long)g_fm_struct,
+				   fm_low_ops.ri.rds_bci_get(), 0);
+		fm_timer_sys->start(fm_timer_sys);
 	} else {
 		WCN_DBG(FM_NTC | MAIN, "start timer fail!!!\n");
 	}
@@ -593,10 +589,7 @@ signed int fm_powerdown(struct fm *fm, int type)
 	}
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
-	if (FM_LOCK(fm_timer_lock))
-		return -FM_ELOCK;
 	fm_cqi_check_timer->stop(fm_cqi_check_timer);
-	FM_UNLOCK(fm_timer_lock);
 #endif
 
 	if (type == 1) {	/* 0: RX 1: TX */
@@ -1599,10 +1592,7 @@ signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 	struct rds_raw_t rds_log;
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
-	if (FM_LOCK(fm_timer_lock))
-		return -FM_ELOCK;
 	fm_cqi_check_timer->stop(fm_cqi_check_timer);
-	FM_UNLOCK(fm_timer_lock);
 #endif
 
 	if (fm_low_ops.bi.mute == NULL) {
@@ -1674,10 +1664,7 @@ signed int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 				WCN_DBG(FM_NTC | MAIN, "Not a valid freq, volset: 5\n");
 			}
 			WCN_DBG(FM_NTC | MAIN, "FM tune to an invalid channel.\n");
-			if (!FM_LOCK(fm_timer_lock)) {
-				fm_cqi_check_timer->start(fm_cqi_check_timer);
-				FM_UNLOCK(fm_timer_lock);
-			}
+			fm_cqi_check_timer->start(fm_cqi_check_timer);
 		}
 	}
 #endif
@@ -1761,10 +1748,7 @@ signed int fm_soft_mute_tune(struct fm *fm, struct fm_softmute_tune_t *parm)
 	signed int ret = 0;
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
-	if (FM_LOCK(fm_timer_lock))
-		return -FM_ELOCK;
 	fm_cqi_check_timer->stop(fm_cqi_check_timer);
-	FM_UNLOCK(fm_timer_lock);
 #endif
 
 	if (fm_low_ops.bi.softmute_tune == NULL) {
@@ -1898,21 +1882,15 @@ static void fm_timer_func(unsigned long data)
 {
 	struct fm *fm = g_fm_struct;
 
-	if (FM_LOCK(fm_timer_lock))
-		return;
-
 	if (fm_timer_sys->update(fm_timer_sys)) {
 		WCN_DBG(FM_NTC | MAIN, "timer skip\n");
-		goto out;	/* fm timer is stopped before timeout */
+		return;	/* fm timer is stopped before timeout */
 	}
 
 	if (fm != NULL) {
 		WCN_DBG(FM_DBG | MAIN, "timer:rds_wk\n");
 		fm->timer_wkthd->add_work(fm->timer_wkthd, fm->rds_wk);
 	}
-
-out:
-	FM_UNLOCK(fm_timer_lock);
 }
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
@@ -1924,21 +1902,15 @@ static void fm_cqi_check_timer_func(unsigned long data)
 {
 	struct fm *fm = g_fm_struct;
 
-	if (FM_LOCK(fm_timer_lock))
-		return;
-
 	if (fm_cqi_check_timer->update(fm_cqi_check_timer)) {
 		WCN_DBG(FM_NTC | MAIN, "timer skip\n");
-		goto out;	/* fm timer is stopped before timeout */
+		return;	/* fm timer is stopped before timeout */
 	}
 
 	if (fm != NULL) {
 		WCN_DBG(FM_DBG | MAIN, "timer:ch_valid_check_wk\n");
 		fm->timer_wkthd->add_work(fm->timer_wkthd, fm->ch_valid_check_wk);
 	}
-
-out:
-	FM_UNLOCK(fm_timer_lock);
 }
 #endif
 
@@ -2120,19 +2092,13 @@ out:
 
 static void fm_enable_rds_BlerCheck(struct fm *fm)
 {
-	if (FM_LOCK(fm_timer_lock))
-		return;
 	fm_timer_sys->start(fm_timer_sys);
-	FM_UNLOCK(fm_timer_lock);
 	WCN_DBG(FM_INF | MAIN, "enable rds timer ok\n");
 }
 
 static void fm_disable_rds_BlerCheck(void)
 {
-	if (FM_LOCK(fm_timer_lock))
-		return;
 	fm_timer_sys->stop(fm_timer_sys);
-	FM_UNLOCK(fm_timer_lock);
 	WCN_DBG(FM_INF | MAIN, "stop rds timer ok\n");
 }
 
@@ -2250,21 +2216,17 @@ void fm_subsys_reset_work_func(struct work_struct *work)
 	g_fm_struct->mute = 0;
 	fm_low_ops.bi.mute(g_fm_struct->mute);
 
-	if (fm_low_ops.ri.rds_bci_get && !FM_LOCK(fm_timer_lock)) {
+	if (fm_low_ops.ri.rds_bci_get) {
 		fm_timer_sys->init(fm_timer_sys, fm_timer_func, (unsigned long)g_fm_struct, fm_low_ops.ri.rds_bci_get(),
 				   0);
 		WCN_DBG(FM_NTC | MAIN, "initial timer ok\n");
-		FM_UNLOCK(fm_timer_lock);
 	} else {
 		WCN_DBG(FM_NTC | MAIN, "initial timer fail!!!\n");
 	}
 
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
-	if (!FM_LOCK(fm_timer_lock)) {
-		fm_cqi_check_timer->init(fm_cqi_check_timer, fm_cqi_check_timer_func,
-					 (unsigned long)g_fm_struct, 1000, 0);
-		FM_UNLOCK(fm_timer_lock);
-	}
+	fm_cqi_check_timer->init(fm_cqi_check_timer, fm_cqi_check_timer_func,
+				 (unsigned long)g_fm_struct, 1000, 0);
 #endif
 	g_fm_struct->rds_on = 1;
 	fm_low_ops.ri.rds_onoff(g_fm_struct->pstRDSData, g_fm_struct->rds_on);
@@ -2668,16 +2630,10 @@ signed int fm_dev_destroy(struct fm *fm)
 
 	WCN_DBG(FM_DBG | MAIN, "%s\n", __func__);
 
-	if (FM_LOCK(fm_timer_lock)) {
-		WCN_DBG(FM_NTC | MAIN, "fm lock failed\n");
-		return -FM_ELOCK;
-	}
-
 	fm_timer_sys->stop(fm_timer_sys);
 #if (FM_INVALID_CHAN_NOISE_REDUCING)
 	fm_cqi_check_timer_func->stop(fm_cqi_check_timer);
 #endif
-	FM_UNLOCK(fm_timer_lock);
 
 	if (!fm) {
 		WCN_DBG(FM_NTC | MAIN, "fm is null\n");
@@ -2774,10 +2730,6 @@ signed int fm_env_setup(void)
 	if (!fm_rds_cnt)
 		return -1;
 
-	fm_timer_lock = fm_spin_lock_create("timer_lock");
-	if (!fm_timer_lock)
-		return -1;
-
 	fm_rxtx_lock = fm_lock_create("rxtx_lock");
 	if (!fm_rxtx_lock)
 		return -1;
@@ -2797,7 +2749,6 @@ signed int fm_env_setup(void)
 	fm_lock_get(fm_ops_lock);
 	fm_lock_get(fm_read_lock);
 	fm_lock_get(fm_rds_cnt);
-	fm_spin_lock_get(fm_timer_lock);
 	fm_lock_get(fm_rxtx_lock);
 	fm_lock_get(fm_rtc_mutex);
 	fm_lock_get(fm_wcn_ops.tx_lock);
@@ -2870,10 +2821,6 @@ signed int fm_env_destroy(void)
 	ret = fm_lock_put(fm_rds_cnt);
 	if (!ret)
 		fm_rds_cnt = NULL;
-
-	ret = fm_spin_lock_put(fm_timer_lock);
-	if (!ret)
-		fm_timer_lock = NULL;
 
 	ret = fm_lock_put(fm_rxtx_lock);
 	if (!ret)
