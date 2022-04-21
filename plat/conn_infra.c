@@ -18,6 +18,7 @@
 
 #if CFG_FM_CONNAC2
 static int (*whole_chip_reset)(signed int sta);
+static int smc_drv_ops_overwrite(void);
 
 static int fm_pre_whole_chip_rst(enum consys_drv_type drv, char *reason)
 {
@@ -1525,9 +1526,10 @@ static int fm_conninfra_func_on(void)
 		/* set top_ck_en_adie */
 		ret = conninfra_adie_top_ck_en_on(
 			CONNSYS_ADIE_CTL_HOST_FM);
-	} else if (ei->family_id == 0x6877 || ei->family_id == 0x6983)
-		ret = fm_conninfra_set_reg_top_ck_en(0x1);
-	else {
+	} else if (ei->family_id == 0x6877 || ei->family_id == 0x6983) {
+		if (ei->top_clk_en)
+			ret = ei->top_clk_en(0x1);
+	} else {
 		WCN_DBG(FM_ERR | CHIP,
 			"%s: invalid family_id:0x%04x!!!\n",
 			__func__, ei->family_id);
@@ -1559,9 +1561,10 @@ static int fm_conninfra_func_off(void)
 		/* clear top_clk_en_adie */
 		ret = conninfra_adie_top_ck_en_off(
 			CONNSYS_ADIE_CTL_HOST_FM);
-	} else if (ei->family_id == 0x6877 || ei->family_id == 0x6983)
-		ret = fm_conninfra_set_reg_top_ck_en(0x0);
-	else {
+	} else if (ei->family_id == 0x6877 || ei->family_id == 0x6983) {
+		if (ei->top_clk_en)
+			ret = ei->top_clk_en(0x0);
+	} else {
 		WCN_DBG(FM_ERR | CHIP,
 			"%s: invalid family_id:0x%04x!!!\n",
 			__func__, ei->family_id);
@@ -1873,6 +1876,8 @@ int fm_register_plat(unsigned int family_id, unsigned int conn_id)
 			ei->base_addr[CONN_RF_SPI_MST_REG] + 0x004;
 		ei->reg_map[FM_CTRL] =
 			ei->base_addr[CONN_RF_SPI_MST_REG] + 0x00C;
+
+		return smc_drv_ops_overwrite();
 	}
 
 	return drv_do_ioremap();
@@ -1908,6 +1913,7 @@ static void register_drv_ops_init(void)
 	ei->host_post_on = drv_host_post_on;
 	ei->host_pre_off = drv_host_pre_off;
 	ei->host_post_off = drv_host_post_off;
+	ei->top_clk_en = fm_conninfra_set_reg_top_ck_en;
 #else
 	ei->enable_eint = NULL;
 	ei->disable_eint = NULL;
@@ -1926,6 +1932,7 @@ static void register_drv_ops_init(void)
 	ei->host_post_on = NULL;
 	ei->host_pre_off = NULL;
 	ei->host_post_off = NULL;
+	ei->top_clk_en = NULL;
 #endif
 	ei->low_ops_register = connac2x_fm_low_ops_register;
 	ei->low_ops_unregister = connac2x_fm_low_ops_unregister;
@@ -1952,5 +1959,247 @@ int fm_wcn_ops_register(void)
 int fm_wcn_ops_unregister(void)
 {
 	register_drv_ops_uninit();
+	return 0;
+}
+
+/* SMC call for mt6983 family */
+static bool fm_smc_set_own(void)
+{
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
+	unsigned int i;
+	int ret = 0;
+
+	ret = FM_LOCK(fm_wcn_ops.own_lock);
+	for (i = 0; ret && i < MAX_SET_OWN_COUNT; i++) {
+		fm_delayms(2);
+		ret = FM_LOCK(fm_wcn_ops.own_lock);
+	}
+
+	/* get lock fail */
+	if (i == MAX_SET_OWN_COUNT) {
+		WCN_DBG(FM_ERR | CHIP, "get own lock fail[%d]\n", ret);
+		return false;
+	}
+
+	ret = fm_smc_call(SMC_FM_SET_OWN);
+	if (ret) {
+		WCN_DBG(FM_ERR | CHIP, "set own fail\n");
+		FM_UNLOCK(fm_wcn_ops.own_lock);
+		return false;
+	}
+
+	if (ei->is_bus_hang && ei->is_bus_hang()) {
+		FM_UNLOCK(fm_wcn_ops.own_lock);
+		return false;
+	}
+
+	/* conn_infra bus debug function setting */
+	/* This is a software workaround for mt6885, mt6891 and mt6893 */
+	if (ei->family_id == 0x6885)
+		conninfra_config_setup();
+
+	return true;
+}
+
+static bool fm_smc_clr_own(void)
+{
+	int ret;
+
+	ret = fm_smc_call(SMC_FM_CLR_OWN);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "clr own fail\n");
+
+	FM_UNLOCK(fm_wcn_ops.own_lock);
+
+	return true;
+}
+
+static int fm_smc_set_reg_top_ck_en(unsigned int val)
+{
+	int ret = 0;
+
+	if (val)
+		ret = fm_smc_call(SMC_FM_TOP_CLK_ON);
+	else
+		ret = fm_smc_call(SMC_FM_TOP_CLK_OFF);
+
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "set top clk fail\n");
+
+	return ret;
+}
+
+static void fm_smc_host_reg_dump(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return;
+	}
+
+	ret = fm_smc_call(SMC_FM_REG_DUMP);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "host reg dump fail\n");
+
+	if (si->clr_own)
+		si->clr_own();
+}
+
+static int fm_smc_host_pre_on(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return -1;
+	}
+
+	ret = fm_smc_call(SMC_FM_PRE_ON);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "host pre on fail\n");
+
+	if (si->clr_own)
+		si->clr_own();
+
+	return ret;
+}
+
+static int fm_smc_host_post_on(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return -1;
+	}
+
+	ret = fm_smc_call(SMC_FM_POST_ON);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "host post on fail\n");
+
+	if (si->clr_own)
+		si->clr_own();
+
+	return ret;
+}
+
+static int fm_smc_host_pre_off(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return -1;
+	}
+
+	ret = fm_smc_call(SMC_FM_PRE_OFF);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "host pre off fail\n");
+
+	if (si->clr_own)
+		si->clr_own();
+
+	return ret;
+}
+
+static int fm_smc_host_post_off(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return -1;
+	}
+
+	ret = fm_smc_call(SMC_FM_POST_OFF);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "host post off fail\n");
+
+	if (si->clr_own)
+		si->clr_own();
+
+	return ret;
+}
+
+static int fm_smc_spi_hopping_on(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return -1;
+	}
+
+	ret = fm_smc_call(SMC_FM_SPI_HOPPING_ON);
+	if (ret) {
+		WCN_DBG(FM_ERR | CHIP, "spi hopping off fail\n");
+		return -1;
+	}
+
+	/* switch SPI clock to 64MHz */
+	if (conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_64M) == -1) {
+		WCN_DBG(FM_ERR | CHIP,
+			"conninfra clock switch 64M fail.\n");
+		ret = -1;
+	}
+
+	if (si->clr_own)
+		si->clr_own();
+
+	return ret;
+}
+
+static int fm_smc_spi_hopping_off(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	int ret = 0;
+
+	if (si->set_own && !si->set_own()) {
+		WCN_DBG(FM_ERR | CHIP, "set_own fail\n");
+		return -1;
+	}
+
+	/* switch SPI clock to 26MHz */
+	if (conninfra_spi_clock_switch(CONNSYS_SPI_SPEED_26M) == -1) {
+		WCN_DBG(FM_ERR | CHIP,
+			"conninfra clock switch 26M fail.\n");
+		return -1;
+	}
+
+	ret = fm_smc_call(SMC_FM_SPI_HOPPING_OFF);
+	if (ret)
+		WCN_DBG(FM_ERR | CHIP, "spi hopping off fail\n");
+
+	if (si->clr_own)
+		si->clr_own();
+
+	return ret;
+}
+
+static int smc_drv_ops_overwrite(void)
+{
+	struct fm_spi_interface *si = &fm_wcn_ops.si;
+	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
+
+	si->set_own = fm_smc_set_own;
+	si->clr_own = fm_smc_clr_own;
+	ei->spi_hopping = fm_smc_spi_hopping_on;
+	ei->disable_spi_hopping = fm_smc_spi_hopping_off;
+	ei->host_reg_dump = fm_smc_host_reg_dump;
+	ei->host_pre_on = fm_smc_host_pre_on;
+	ei->host_post_on = fm_smc_host_post_on;
+	ei->host_pre_off = fm_smc_host_pre_off;
+	ei->host_post_off = fm_smc_host_post_off;
+	ei->top_clk_en = fm_smc_set_reg_top_ck_en;
+
+	WCN_DBG(FM_NTC | CHIP, "FM SMC support turn on.\n");
+
 	return 0;
 }
