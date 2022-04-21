@@ -896,3 +896,14 @@ void fm_set_u32_to_auc(unsigned char *buf, unsigned int val)
 	buf[2] = (unsigned char)(val >> 16);
 	buf[3] = (unsigned char)(val >> 24);
 }
+
+signed int fm_smc_call(unsigned int opid)
+{
+	struct arm_smccc_res res;
+
+	arm_smccc_smc(MTK_SIP_KERNEL_FM_CONTROL,
+			opid,
+			0, 0, 0, 0, 0, 0, &res);
+	return (res.a0 == FM_STATUS_OK) ? 0 : -1;
+}
+
