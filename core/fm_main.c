@@ -46,7 +46,7 @@ static struct fm_timer *fm_timer_sys;
 static struct fm_timer *fm_cqi_check_timer;
 #endif
 
-#define FM_CHIP_CAN_SUSPEND 0x00006631
+#define FM_CHIP_CAN_SUSPEND 0x00006627
 FM_WAKE_LOCK_T *fm_wake_lock;
 
 static bool scan_stop_flag; /* false */
