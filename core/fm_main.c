@@ -2630,6 +2630,12 @@ ERR_EXIT:
 		fm->pstRDSData = NULL;
 	}
 
+	if (fm->rds_event) {
+		ret = fm_flag_event_put(fm->rds_event);
+		if (!ret)
+			fm->rds_event = NULL;
+	}
+
 	fm_free(fm);
 	g_fm_struct = NULL;
 	return NULL;
