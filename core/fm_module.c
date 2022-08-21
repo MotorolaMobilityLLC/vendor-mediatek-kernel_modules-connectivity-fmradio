@@ -713,9 +713,15 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 
 	case FM_IOCTL_FM_SET_STATUS:{
+			signed int tx_support = -1;
 			struct fm_status_t fm_stat;
 
 			WCN_DBG(FM_DBG | MAIN, "FM_IOCTL_FM_SET_STATUS");
+
+			/* no tx support */
+			ret = fm_tx_support(fm, &tx_support);
+			if (tx_support == 0)
+				goto out;
 
 			if (copy_from_user(&fm_stat, (void *)arg, sizeof(struct fm_status_t))) {
 				ret = -EFAULT;
@@ -728,9 +734,15 @@ static long fm_ops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 
 	case FM_IOCTL_FM_GET_STATUS:{
+			signed int tx_support = -1;
 			struct fm_status_t fm_stat;
 
 			WCN_DBG(FM_DBG | MAIN, "FM_IOCTL_FM_GET_STATUS");
+
+			/* no tx support */
+			ret = fm_tx_support(fm, &tx_support);
+			if (tx_support == 0)
+				goto out;
 
 			if (copy_from_user(&fm_stat, (void *)arg, sizeof(struct fm_status_t))) {
 				ret = -EFAULT;
