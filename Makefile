@@ -15,15 +15,15 @@ define build_kernel_modules
     $(info [fm_drv:Makefile:build] CFG_BUILD_CONNAC2 = $(2))
     $(info [fm_drv:Makefile:build] CFG_FM_CHIP_ID = $(3))
     $(info [fm_drv:Makefile:build] CFG_FM_CHIP = $(4))
-    $(MAKE) -C $(KERNEL_SRC) M=$(M)/Build/$(1) modules $(KBUILD_OPTIONS) CFG_FM_PLAT=$(1) CFG_BUILD_CONNAC2=$(2) CFG_FM_CHIP_ID=$(3) CFG_FM_CHIP=$(4) KBUILD_EXTRA_SYMBOLS="$(5)"
+    +$(MAKE) -C $(KERNEL_SRC) M=$(M)/Build/$(1) modules $(KBUILD_OPTIONS) CFG_FM_PLAT=$(1) CFG_BUILD_CONNAC2=$(2) CFG_FM_CHIP_ID=$(3) CFG_FM_CHIP=$(4) KBUILD_EXTRA_SYMBOLS="$(5)"
 endef
 
 define install_kernel_modules
-   $(MAKE) M=$(M)/Build/$(1) -C $(KERNEL_SRC) modules_install
+   +$(MAKE) M=$(M)/Build/$(1) -C $(KERNEL_SRC) modules_install
 endef
 
 define clean_kernel_modules
-   $(MAKE) -C $(KERNEL_SRC) M=$(M)/Build/$(1) clean
+   +$(MAKE) -C $(KERNEL_SRC) M=$(M)/Build/$(1) clean
 endef
 
 extra_symbols := $(abspath $(O)/../vendor/mediatek/kernel_modules/connectivity/common/Module.symvers)
